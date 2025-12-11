@@ -11,9 +11,96 @@ import {
   AlertTriangle,
   Clock
 } from "lucide-react";
+import LoginPage from "./components/login-page";
+
+// ==================== TYPE DEFINITIONS ====================
+interface Student {
+  id: string;
+  name: string;
+  age: number;
+  sex: string;
+  student_id: string;
+}
+
+interface HealthStats {
+  blood_group: string;
+  prescription_count: number;
+  appointment_count: number;
+  allergies: string[];
+  chronic_conditions: string[];
+}
+
+interface Doctor {
+  id: string;
+  name: string;
+  specialization: string;
+}
+
+interface Appointment {
+  id: string;
+  student_id: string;
+  doctor_name: string;
+  date: string;
+  time: string;
+  reason: string;
+  status: string;
+}
+
+interface Medicine {
+  name: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+}
+
+interface Prescription {
+  id: string;
+  prescription_number: string;
+  patient_name: string;
+  date: string;
+  clinic: string;
+  symptoms: string[];
+  medicines: Medicine[];
+  prescriber_name: string;
+  status: string;
+}
+
+interface UserData {
+  role: string;
+  name: string;
+  id: string;
+}
+
+interface LoginData {
+  role: string;
+  name: string;
+}
+
+interface BookingData {
+  doctor_id: string;
+  date: string;
+  time: string;
+  reason: string;
+}
+
+interface AppointmentCreationData extends BookingData {
+  student_id: string;
+  student_name: string;
+  doctor_name: string;
+}
+
+interface MockApiResponse<T> {
+  data: T;
+}
 
 // ==================== MOCK DATA ====================
-const MOCK_DATA = {
+const MOCK_DATA: {
+  students: Student[];
+  healthStats: { [key: string]: HealthStats };
+  doctors: Doctor[];
+  appointments: { [key: string]: Appointment[] };
+  prescriptions: { [key: string]: Prescription[] };
+} = {
   students: [
     { id: "S001", name: "John Smith", age: 21, sex: "Male", student_id: "STU001" },
     { id: "S002", name: "Emma Johnson", age: 22, sex: "Female", student_id: "STU002" },
@@ -184,7 +271,7 @@ const MOCK_DATA = {
 
 // Mock API with delays to simulate real API
 const mockApi = {
-  login: (data) => {
+  login: (data: LoginData): Promise<MockApiResponse<UserData>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
@@ -198,7 +285,7 @@ const mockApi = {
     });
   },
 
-  getStudents: () => {
+  getStudents: (): Promise<MockApiResponse<Student[]>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ data: MOCK_DATA.students });
@@ -206,15 +293,15 @@ const mockApi = {
     });
   },
 
-  getStudentHealthStats: (id) => {
+  getStudentHealthStats: (id: string): Promise<MockApiResponse<HealthStats>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve({ data: MOCK_DATA.healthStats[id] || {} });
+        resolve({ data: MOCK_DATA.healthStats[id] || {} as HealthStats });
       }, 300);
     });
   },
 
-  getDoctors: () => {
+  getDoctors: (): Promise<MockApiResponse<Doctor[]>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ data: MOCK_DATA.doctors });
@@ -222,7 +309,7 @@ const mockApi = {
     });
   },
 
-  getAppointments: (params) => {
+  getAppointments: (params: { student_id: string }): Promise<MockApiResponse<Appointment[]>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const appointments = MOCK_DATA.appointments[params.student_id] || [];
@@ -231,12 +318,16 @@ const mockApi = {
     });
   },
 
-  createAppointment: (data) => {
+  createAppointment: (data: AppointmentCreationData): Promise<MockApiResponse<Appointment>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const newAppointment = {
+        const newAppointment: Appointment = {
           id: `A${Date.now()}`,
-          ...data,
+          student_id: data.student_id,
+          doctor_name: data.doctor_name,
+          date: data.date,
+          time: data.time,
+          reason: data.reason,
           status: "scheduled"
         };
         // Add to mock data
@@ -249,7 +340,7 @@ const mockApi = {
     });
   },
 
-  getPrescriptions: (params) => {
+  getPrescriptions: (params: { patient_name: string }): Promise<MockApiResponse<Prescription[]>> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const prescriptions = MOCK_DATA.prescriptions[params.patient_name] || [];
@@ -260,101 +351,16 @@ const mockApi = {
 };
 
 // ==================== LOGIN PAGE ====================
-function LoginPage({ onLogin }) {
-  const [selectedRole, setSelectedRole] = useState("");
-  const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async () => {
-    if (!selectedRole || !name) return;
-    setLoading(true);
-    try {
-      const response = await mockApi.login({ role: selectedRole, name });
-      onLogin(response.data);
-    } catch (error) {
-      console.error("Login failed:", error);
-      alert("Login failed. Please try again.");
-    }
-    setLoading(false);
-  };
-
-  const roles = [
-    { id: "student", icon: GraduationCap, label: "Student", desc: "Access health records & book appointments" },
-    { id: "doctor", icon: Stethoscope, label: "Doctor", desc: "Manage patients & prescriptions" },
-    { id: "pharmacist", icon: Pill, label: "Pharmacist", desc: "Process orders & manage inventory" }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
-            <Heart className="h-8 w-8 text-blue-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Healthcare AI Platform</h1>
-          <p className="text-gray-500 mt-2">Select your role to continue</p>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs text-blue-700 font-medium">📌 Demo Mode: Using Mock Data</p>
-            <p className="text-xs text-blue-600 mt-1">No backend required - all data is simulated</p>
-          </div>
-        </div>
-
-        {/* Name Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
-          <input
-            type="text"
-            placeholder="Enter your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-          />
-        </div>
-
-        {/* Role Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">Select Role</label>
-          <div className="space-y-3">
-            {roles.map((role) => {
-              const Icon = role.icon;
-              return (
-                <button
-                  key={role.id}
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left ${
-                    selectedRole === role.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <Icon className={`h-6 w-6 ${selectedRole === role.id ? "text-blue-600" : "text-gray-500"}`} />
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900">{role.label}</div>
-                    <div className="text-sm text-gray-500">{role.desc}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Login Button */}
-        <button
-          onClick={handleLogin}
-          disabled={!selectedRole || !name || loading}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-        >
-          {loading ? "Logging in..." : "Continue"}
-        </button>
-      </div>
-    </div>
-  );
-}
+// Using imported LoginPage component from components/login-page.tsx
 
 // ==================== HEADER COMPONENT ====================
-function Header({ user, onLogout }) {
-  const roleIcons = {
+interface HeaderProps {
+  user: UserData;
+  onLogout: () => void;
+}
+
+function Header({ user, onLogout }: HeaderProps) {
+  const roleIcons: { [key: string]: typeof GraduationCap } = {
     student: GraduationCap,
     doctor: Stethoscope,
     pharmacist: Pill
@@ -391,17 +397,21 @@ function Header({ user, onLogout }) {
 }
 
 // ==================== STUDENT DASHBOARD ====================
-function StudentDashboard({ user }) {
-  const [students, setStudents] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [healthStats, setHealthStats] = useState(null);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [doctors, setDoctors] = useState([]);
-  const [activeTab, setActiveTab] = useState("appointments");
-  const [showBooking, setShowBooking] = useState(false);
-  const [bookingData, setBookingData] = useState({ doctor_id: "", date: "", time: "", reason: "" });
-  const [loading, setLoading] = useState(true);
+interface StudentDashboardProps {
+  user: UserData;
+}
+
+function StudentDashboard({ user }: StudentDashboardProps) {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [healthStats, setHealthStats] = useState<HealthStats | null>(null);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("appointments");
+  const [showBooking, setShowBooking] = useState<boolean>(false);
+  const [bookingData, setBookingData] = useState<BookingData>({ doctor_id: "", date: "", time: "", reason: "" });
+  const [loading, setLoading] = useState<boolean>(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -436,7 +446,7 @@ function StudentDashboard({ user }) {
     loadData();
   }, [loadData]);
 
-  const handleSelectStudent = async (studentId) => {
+  const handleSelectStudent = async (studentId: string) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
@@ -483,7 +493,7 @@ function StudentDashboard({ user }) {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case "completed": return "bg-green-100 text-green-700";
       case "scheduled": return "bg-blue-100 text-blue-700";
@@ -812,7 +822,7 @@ function StudentDashboard({ user }) {
                   placeholder="Describe your symptoms or reason for visit"
                   value={bookingData.reason}
                   onChange={(e) => setBookingData({ ...bookingData, reason: e.target.value })}
-                  rows="4"
+                  rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
                 />
               </div>
@@ -841,9 +851,28 @@ function StudentDashboard({ user }) {
 
 // ==================== MAIN APP COMPONENT ====================
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<UserData | null>(null);
 
-  const handleLogin = (userData) => {
+  const handleLogin = async (credentials: { role: string; credentials: { email?: string; password?: string } }) => {
+    // Adapter function to convert new LoginPage credentials to UserData format
+    // Map "patient" from LoginPage to "student" for compatibility with existing app logic
+    const mappedRole = credentials.role === "patient" ? "student" : credentials.role;
+
+    const userData: UserData = {
+      role: mappedRole,
+      name: credentials.credentials.email?.split('@')[0] || mappedRole + " User",
+      id: mappedRole === "student" ? "S001" : mappedRole === "doctor" ? "D001" : "PH001"
+    };
+    setUser(userData);
+  };
+
+  const handleGoogleLogin = async () => {
+    // Handle Google login for patients (map to "student" role)
+    const userData: UserData = {
+      role: "student",
+      name: "Student User",
+      id: "S001"
+    };
     setUser(userData);
   };
 
@@ -852,7 +881,7 @@ function App() {
   };
 
   if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} initialRole="patient" />;
   }
 
   return (
