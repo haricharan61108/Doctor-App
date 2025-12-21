@@ -12,6 +12,9 @@ import {
   Clock
 } from "lucide-react";
 import LoginPage from "./components/login-page";
+import { PatientDashboard } from "./components/patient";
+import { DoctorDashboard as NewDoctorDashboard } from "./components/doctor";
+import { PharmacistDashboard } from "./components/pharmacist";
 
 // ==================== TYPE DEFINITIONS ====================
 interface Student {
@@ -372,7 +375,7 @@ function Header({ user, onLogout }: HeaderProps) {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Heart className="h-7 w-7 text-blue-600" />
-          <span className="font-bold text-xl text-gray-900">Healthcare AI</span>
+          <span className="font-bold text-xl text-gray-900">UHealth</span>
           <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">DEMO MODE</span>
         </div>
         <div className="flex items-center gap-4">
@@ -380,7 +383,7 @@ function Header({ user, onLogout }: HeaderProps) {
             <RoleIcon className="h-5 w-5 text-gray-600" />
             <span className="font-medium text-gray-900">{user.name}</span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded capitalize">
-              {user.role}
+              {user.role === "student" ? "Patient" : user.role}
             </span>
           </div>
           <button
@@ -446,26 +449,7 @@ function StudentDashboard({ user }: StudentDashboardProps) {
     loadData();
   }, [loadData]);
 
-  const handleSelectStudent = async (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-
-    setSelectedStudent(student);
-    setLoading(true);
-    try {
-      const [statsRes, prescsRes, apptsRes] = await Promise.all([
-        mockApi.getStudentHealthStats(student.id),
-        mockApi.getPrescriptions({ patient_name: student.name }),
-        mockApi.getAppointments({ student_id: student.id })
-      ]);
-      setHealthStats(statsRes.data);
-      setPrescriptions(prescsRes.data);
-      setAppointments(apptsRes.data);
-    } catch (error) {
-      console.error("Failed to load student data:", error);
-    }
-    setLoading(false);
-  };
+  // Removed handleSelectStudent - not used in this demo version
 
   const handleBookAppointment = async () => {
     if (!selectedStudent || !bookingData.doctor_id || !bookingData.date || !bookingData.time) {
@@ -521,23 +505,17 @@ function StudentDashboard({ user }: StudentDashboardProps) {
         {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Student Health Portal</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Patient Health Portal</h1>
             <p className="text-gray-600 mt-1">Welcome, {user.name}</p>
           </div>
-          {students.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Select Student:</label>
-              <select
-                value={selectedStudent?.id || ""}
-                onChange={(e) => handleSelectStudent(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              >
-                {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+            <span className="text-sm font-medium text-gray-700">
+              Patient:
+            </span>
+            <span className="text-sm font-semibold text-gray-900">
+              {user.name}
+            </span>
+          </div>
         </div>
 
         {selectedStudent && healthStats && (
@@ -849,34 +827,468 @@ function StudentDashboard({ user }: StudentDashboardProps) {
   );
 }
 
+// ==================== DOCTOR DASHBOARD ====================
+// Note: This is the old demo DoctorDashboard. The real one is imported from components/doctor
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface DoctorDashboardProps {
+  user: UserData;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function DoctorDashboard({ user }: DoctorDashboardProps) {
+  const [patients, setPatients] = useState<Student[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Student | null>(null);
+  const [patientPrescriptions, setPatientPrescriptions] = useState<Prescription[]>([]);
+  const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
+  const [newPrescription, setNewPrescription] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>("summary");
+
+  // Mock AI summary for demo
+  const aiSummary = `Patient presents with chronic respiratory issues. Previous consultations indicate mild asthma with seasonal triggers. No known drug allergies except Penicillin. Blood group O+ with no major chronic conditions besides asthma. Recommend continued monitoring and preventive care.`;
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const studentsRes = await mockApi.getStudents();
+        setPatients(studentsRes.data);
+
+        // Auto-select first patient
+        if (studentsRes.data.length > 0) {
+          const patient = studentsRes.data[0];
+          setSelectedPatient(patient);
+          const [prescsRes, apptsRes] = await Promise.all([
+            mockApi.getPrescriptions({ patient_name: patient.name }),
+            mockApi.getAppointments({ student_id: patient.id })
+          ]);
+          setPatientPrescriptions(prescsRes.data);
+          setPatientAppointments(apptsRes.data);
+        }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+      }
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  const handleSelectPatient = async (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    setSelectedPatient(patient);
+    setLoading(true);
+    try {
+      const [prescsRes, apptsRes] = await Promise.all([
+        mockApi.getPrescriptions({ patient_name: patient.name }),
+        mockApi.getAppointments({ student_id: patient.id })
+      ]);
+      setPatientPrescriptions(prescsRes.data);
+      setPatientAppointments(apptsRes.data);
+    } catch (error) {
+      console.error("Failed to load patient data:", error);
+    }
+    setLoading(false);
+  };
+
+  const handleSubmitPrescription = () => {
+    if (!newPrescription.trim()) {
+      alert("Please enter prescription details");
+      return;
+    }
+    alert("Prescription submitted successfully!");
+    setNewPrescription("");
+    // In real app, would call API and remove from doctor's pending list
+  };
+
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case "completed": return "bg-green-100 text-green-700";
+      case "scheduled": return "bg-blue-100 text-blue-700";
+      case "in-progress": return "bg-yellow-100 text-yellow-700";
+      case "dispensed": return "bg-green-100 text-green-700";
+      case "approved": return "bg-blue-100 text-blue-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  if (loading && !selectedPatient) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Doctor Portal</h1>
+          <p className="text-gray-600 mt-1">Welcome, Dr. {user.name}</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Sidebar - Patient List */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <User className="h-5 w-5 text-blue-600" />
+                  Patient List
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">{patients.length} patients</p>
+              </div>
+              <div className="divide-y divide-gray-200 max-h-[calc(100vh-280px)] overflow-y-auto">
+                {patients.map(patient => (
+                  <button
+                    key={patient.id}
+                    onClick={() => handleSelectPatient(patient.id)}
+                    className={`w-full p-4 text-left hover:bg-gray-50 transition ${
+                      selectedPatient?.id === patient.id ? "bg-blue-50 border-l-4 border-blue-600" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        selectedPatient?.id === patient.id ? "bg-blue-600" : "bg-gray-200"
+                      }`}>
+                        <User className={`h-5 w-5 ${
+                          selectedPatient?.id === patient.id ? "text-white" : "text-gray-600"
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{patient.name}</p>
+                        <p className="text-sm text-gray-600">{patient.age}y • {patient.sex}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Content - Patient Details */}
+          <div className="lg:col-span-2">
+            {selectedPatient ? (
+              <div className="space-y-6">
+                {/* Patient Info Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                        <User className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedPatient.name}</h2>
+                        <p className="text-gray-600">{selectedPatient.age} years • {selectedPatient.sex}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Patient ID</p>
+                      <p className="font-mono font-semibold text-gray-900">{selectedPatient.student_id}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+                    <div className="bg-red-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-1">Blood Group</p>
+                      <p className="text-lg font-bold text-red-600">O+</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-1">Appointments</p>
+                      <p className="text-lg font-bold text-green-600">{patientAppointments.length}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-600 mb-1">Prescriptions</p>
+                      <p className="text-lg font-bold text-blue-600">{patientPrescriptions.length}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  {/* Tab Headers */}
+                  <div className="flex border-b border-gray-200">
+                    {[
+                      { id: "summary", label: "AI Summary", icon: Stethoscope },
+                      { id: "prescriptions", label: "Old Prescriptions", icon: FileText },
+                      { id: "new", label: "New Prescription", icon: FileText }
+                    ].map(tab => {
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`flex-1 px-6 py-4 font-medium text-sm flex items-center justify-center gap-2 transition ${
+                            activeTab === tab.id
+                              ? "bg-blue-50 text-blue-600 border-b-2 border-blue-600"
+                              : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Tab Content */}
+                  <div className="p-6">
+                    {/* AI Summary Tab */}
+                    {activeTab === "summary" && (
+                      <div>
+                        <div className="flex items-start gap-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4">
+                          <Stethoscope className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <h3 className="font-semibold text-gray-900 mb-2">AI-Generated Summary</h3>
+                            <p className="text-sm text-gray-700 leading-relaxed">{aiSummary}</p>
+                          </div>
+                        </div>
+
+                        {/* Recent Appointments */}
+                        <div className="mt-6">
+                          <h3 className="font-semibold text-gray-900 mb-3">Recent Appointments</h3>
+                          <div className="space-y-2">
+                            {patientAppointments.slice(0, 3).map(apt => (
+                              <div key={apt.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  <Calendar className="h-4 w-4 text-gray-500" />
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900">{apt.reason}</p>
+                                    <p className="text-xs text-gray-600">{apt.date} at {apt.time}</p>
+                                  </div>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(apt.status)}`}>
+                                  {apt.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Old Prescriptions Tab */}
+                    {activeTab === "prescriptions" && (
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Prescription History</h3>
+                        <div className="space-y-4">
+                          {patientPrescriptions.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500">
+                              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                              <p>No prescription history</p>
+                            </div>
+                          ) : (
+                            patientPrescriptions.map(presc => (
+                              <div key={presc.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-100 rounded-lg">
+                                      <FileText className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-gray-900">Prescription #{presc.prescription_number}</p>
+                                      <p className="text-sm text-gray-600">{presc.date}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(presc.status)}`}>
+                                    {presc.status}
+                                  </span>
+                                </div>
+
+                                <div className="space-y-2 text-sm">
+                                  <div>
+                                    <p className="font-semibold text-gray-700">Symptoms:</p>
+                                    <p className="text-gray-600">{presc.symptoms?.join(", ")}</p>
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-gray-700">Medications:</p>
+                                    <ul className="list-disc list-inside text-gray-600 space-y-1">
+                                      {presc.medicines?.map((med, idx) => (
+                                        <li key={idx}>
+                                          {med.name} {med.dosage} - {med.frequency} for {med.duration}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div className="pt-2 border-t border-gray-200">
+                                    <p className="text-gray-600">
+                                      <span className="font-semibold">Prescribed by:</span> {presc.prescriber_name}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New Prescription Tab */}
+                    {activeTab === "new" && (
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Create New Prescription</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Prescription Details
+                            </label>
+                            <textarea
+                              value={newPrescription}
+                              onChange={(e) => setNewPrescription(e.target.value)}
+                              placeholder="Enter symptoms, diagnosis, medications, dosage, frequency, and duration..."
+                              rows={12}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                              Example: Symptoms: Fever, Cough | Diagnosis: Upper respiratory infection | Medications: Amoxicillin 500mg, 3 times daily for 7 days
+                            </p>
+                          </div>
+
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                              <div>
+                                <p className="text-sm font-semibold text-yellow-800">Patient Allergies</p>
+                                <p className="text-sm text-yellow-700">Penicillin, Peanuts</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => setNewPrescription("")}
+                              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                            >
+                              Clear
+                            </button>
+                            <button
+                              onClick={handleSubmitPrescription}
+                              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              Submit Prescription
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <User className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-600">Select a patient to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== MAIN APP COMPONENT ====================
 function App() {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserData | null>(()=> {
+    const savedUser = localStorage.getItem('healthcare_user');
+    return savedUser ? JSON.parse(savedUser): null;
+  })
 
-  const handleLogin = async (credentials: { role: string; credentials: { email?: string; password?: string } }) => {
-    // Adapter function to convert new LoginPage credentials to UserData format
-    // Map "patient" from LoginPage to "student" for compatibility with existing app logic
-    const mappedRole = credentials.role === "patient" ? "student" : credentials.role;
+  const handleLogin = async (credentials: { role: string; credentials: { email?: string; password?: string; name?: string; googleId?: string; avatarUrl?: string } }) => {
+    try {
+      if (credentials.role === "patient") {
+        // Patient Google OAuth
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_URL}/auth/patient/google-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Important: Include cookies
+          body: JSON.stringify({
+            email: credentials.credentials.email,
+            name: credentials.credentials.name,
+            googleId: credentials.credentials.googleId,
+            avatarUrl: credentials.credentials.avatarUrl
+          })
+        });
 
-    const userData: UserData = {
-      role: mappedRole,
-      name: credentials.credentials.email?.split('@')[0] || mappedRole + " User",
-      id: mappedRole === "student" ? "S001" : mappedRole === "doctor" ? "D001" : "PH001"
-    };
-    setUser(userData);
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Login failed');
+        }
+
+        const data = await response.json();
+
+        const userData: UserData = {
+          role: "student",
+          name: data.patient.name || credentials.credentials.email?.split('@')[0] || "Patient",
+          id: data.patient.id
+        };
+
+        localStorage.setItem('healthcare_user', JSON.stringify(userData));
+        setUser(userData);
+      } else if (credentials.role === "doctor") {
+        // Doctor login
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_URL}/auth/doctor/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email: credentials.credentials.email,
+            password: credentials.credentials.password
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Login failed');
+        }
+
+        const data = await response.json();
+
+        const userData: UserData = {
+          role: "doctor",
+          name: data.doctor.name,
+          id: data.doctor.id
+        };
+
+        localStorage.setItem('healthcare_user', JSON.stringify(userData));
+        setUser(userData);
+      } else {
+        // Pharmacist (mock for now)
+        const userData: UserData = {
+          role: "pharmacist",
+          name: credentials.credentials.email?.split('@')[0] || "Pharmacist",
+          id: "PH001"
+        };
+        localStorage.setItem('healthcare_user', JSON.stringify(userData));
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleGoogleLogin = async () => {
-    // Handle Google login for patients (map to "student" role)
-    const userData: UserData = {
-      role: "student",
-      name: "Student User",
-      id: "S001"
-    };
-    setUser(userData);
+    // This function is no longer needed as Google login is handled via handleLogin
+    // But kept for backwards compatibility
+    console.warn('handleGoogleLogin is deprecated, use handleLogin instead');
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('healthcare_user');
     setUser(null);
   };
 
@@ -887,19 +1299,9 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} onLogout={handleLogout} />
-      {user.role === "student" && <StudentDashboard user={user} />}
-      {user.role !== "student" && (
-        <div className="container mx-auto p-8 text-center">
-          <div className="bg-white rounded-xl p-12 shadow-sm border border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Coming Soon</h2>
-            <p className="text-gray-600">
-              {user.role === "doctor" && "Doctor dashboard will be available soon."}
-              {user.role === "pharmacist" && "Pharmacist dashboard will be available soon."}
-            </p>
-            <p className="text-sm text-gray-500 mt-4">Currently using mock data for demonstration</p>
-          </div>
-        </div>
-      )}
+      {user.role === "student" && <PatientDashboard userName={user.name} />}
+      {user.role === "doctor" && <NewDoctorDashboard userName={user.name} />}
+      {user.role === "pharmacist" && <PharmacistDashboard userName={user.name} />}
     </div>
   );
 }

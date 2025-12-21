@@ -31,6 +31,9 @@ interface LoginCredentials {
   credentials: {
     email?: string
     password?: string
+    name?: string
+    googleId?: string
+    avatarUrl?: string
   }
 }
 
@@ -69,9 +72,6 @@ function useFormValidation() {
   const validatePassword = useCallback((value: string): string | undefined => {
     if (!value) {
       return "Password is required"
-    }
-    if (value.length < 8) {
-      return "Password must be at least 8 characters"
     }
     return undefined
   }, [])
@@ -178,18 +178,16 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
           }
         )
 
-        // Send to backend for authentication
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'
-        const response = await axios.post(`${backendUrl}/api/auth/google`, {
-          token: tokenResponse.access_token,
-          userInfo: userInfo.data
-        })
+        console.log('Google login successful:', userInfo.data)
 
-        // Call the onLogin callback with the response
+        // Call the onLogin callback with full user info for backend API
         await onLogin?.({
           role: 'patient',
           credentials: {
-            email: userInfo.data.email
+            email: userInfo.data.email,
+            name: userInfo.data.name,
+            googleId: userInfo.data.sub, // Google user ID
+            avatarUrl: userInfo.data.picture
           }
         })
       } catch (error) {
@@ -223,7 +221,6 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
         localStorage.removeItem("remember-role")
       }
 
-      // Call mock API (replace with real backend call)
       await mockApiCall({
         email: form.email,
         password: form.password,
@@ -314,7 +311,7 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
                 />
               </svg>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">HealthHub</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">UHealth</h1>
             <p className={`text-base sm:text-lg ${isDarkMode ? "text-indigo-200" : "text-indigo-50"}`}>
               Secure access to your healthcare platform
             </p>
@@ -576,19 +573,7 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
 
             {/* Footer */}
             <div className={`mt-6 sm:mt-8 text-center text-xs sm:text-sm ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
-              <p>
-                Don't have an account?{" "}
-                <a
-                  href="#signup"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    // TODO: Navigate to signup
-                  }}
-                  className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-                >
-                  Sign up here
-                </a>
-              </p>
+              
             </div>
           </div>
         </div>
