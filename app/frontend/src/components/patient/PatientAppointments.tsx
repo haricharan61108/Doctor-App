@@ -1,5 +1,7 @@
-import { Calendar, Clock, Stethoscope, MapPin, Video, Phone } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Clock, Stethoscope, MapPin, Video, Phone, FileText } from "lucide-react";
 import { Appointment } from "./patientDemoData";
+import PrescriptionModal from "./PrescriptionModal";
 
 interface PatientAppointmentsProps {
   appointments: Appointment[];
@@ -7,6 +9,19 @@ interface PatientAppointmentsProps {
 }
 
 export default function PatientAppointments({ appointments, onBookAppointment }: PatientAppointmentsProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+
+  const handleViewPrescription = (appointmentId: string) => {
+    setSelectedAppointmentId(appointmentId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedAppointmentId(null);
+  };
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case "completed":
@@ -158,9 +173,20 @@ export default function PatientAppointments({ appointments, onBookAppointment }:
                       <p className="text-sm text-gray-600 truncate">{apt.reason}</p>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-medium text-gray-900">{apt.date}</p>
-                    <p className="text-xs text-gray-600">{apt.time}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-medium text-gray-900">{apt.date}</p>
+                      <p className="text-xs text-gray-600">{apt.time}</p>
+                    </div>
+                    {apt.status === "completed" && (
+                      <button
+                        onClick={() => handleViewPrescription(apt.id)}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 flex-shrink-0"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Prescription
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -184,6 +210,13 @@ export default function PatientAppointments({ appointments, onBookAppointment }:
           </button>
         </div>
       )}
+
+      {/* Prescription Modal */}
+      <PrescriptionModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        appointmentId={selectedAppointmentId}
+      />
     </div>
   );
 }

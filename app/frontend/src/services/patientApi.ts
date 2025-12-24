@@ -64,6 +64,23 @@ export interface PatientFile {
   uploadedAt: string;
 }
 
+export interface Prescription {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId: string;
+  content: string;
+  status: string;
+  createdAt: string;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  doctor: {
+    id: string;
+    name: string;
+    specialization: string;
+  };
+}
+
 // API Functions
 export const patientApi = {
   // Get all available doctors
@@ -134,6 +151,14 @@ export const patientApi = {
     const response = await api.delete<{ message: string
   }>(`/patient/files/${fileId}`);
     return response.data;
+  },
+
+  // Get prescription by appointment ID
+  getPrescriptionByAppointment: async (appointmentId: string) => {
+    const response = await api.get<{ prescription: Prescription }>(
+      `/patient/prescriptions/${appointmentId}`
+    );
+    return response.data.prescription;
   },
 
 };

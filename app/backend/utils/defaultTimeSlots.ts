@@ -1,6 +1,6 @@
 /**
  * Generates default time slots for a doctor on a given date
- * Default hours: 9 AM - 6 PM
+ * Default hours: 9 AM - 11 PM (EXTENDED FOR TESTING)
  * Slot duration: 30 minutes
  * Breaks:
  *  - Lunch: 1:00 PM - 2:00 PM
@@ -22,8 +22,8 @@ export function generateDefaultTimeSlots(date: Date): TimeSlot[] {
 
   // Start time: 9:00 AM
   const startHour = 9;
-  // End time: 6:00 PM (18:00)
-  const endHour = 18;
+  // End time: 11:00 PM (23:00) - EXTENDED FOR TESTING
+  const endHour = 23;
   // Slot duration in minutes
   const slotDuration = 30;
 
@@ -58,7 +58,7 @@ export function generateDefaultTimeSlots(date: Date): TimeSlot[] {
       const endTime = new Date(startTime);
       endTime.setMinutes(endTime.getMinutes() + slotDuration);
 
-      // Don't add slots that go beyond 6 PM
+      // Don't add slots that go beyond 11 PM
       if (endTime.getHours() > endHour) {
         break;
       }
@@ -97,9 +97,9 @@ export function isBreakTime(time: Date): boolean {
 }
 
 /**
- * Checks if a given time slot is within working hours (9 AM - 6 PM)
+ * Checks if a given time slot is within working hours (9 AM - 11 PM) - EXTENDED FOR TESTING
  */
 export function isWithinWorkingHours(time: Date): boolean {
   const hours = time.getHours();
-  return hours >= 9 && hours < 18;
+  return hours >= 9 && hours < 23;
 }

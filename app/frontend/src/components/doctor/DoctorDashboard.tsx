@@ -2,6 +2,7 @@ import { Stethoscope, Users, FileText, Clock, Calendar, User, Mail,
   Phone } from "lucide-react";
   import { useState, useEffect } from "react";
   import doctorApi, { Appointment } from "../../services/doctorApi";
+  import AppointmentDetailModal from "./AppointmentDetailModal";
 
 interface DoctorDashboardProps {
   userName: string;
@@ -11,6 +12,8 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const[loading, setLoading] = useState(true);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(()=> {
     const fetchAppointments = async()=> {
@@ -143,10 +146,14 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
               ) : (
                 <div className="space-y-4">
                   {appointments.map((appointment) => (
-                    <div 
-                      key={appointment.id} 
-                      className="border border-gray-200 rounded-lg p-4 
-  hover:shadow-md transition-shadow"
+                    <div
+                      key={appointment.id}
+                      className="border border-gray-200 rounded-lg p-4
+  hover:shadow-md transition-shadow cursor-pointer hover:border-blue-400"
+                      onClick={() => {
+                        setSelectedAppointmentId(appointment.id);
+                        setIsModalOpen(true);
+                      }}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4 flex-1">
@@ -209,6 +216,18 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
             </div>
           </div>
       </div>
+
+      {/* Appointment Detail Modal */}
+      {selectedAppointmentId && (
+        <AppointmentDetailModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedAppointmentId(null);
+          }}
+          appointmentId={selectedAppointmentId}
+        />
+      )}
     </div>
   );
 }

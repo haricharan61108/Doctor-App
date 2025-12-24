@@ -501,3 +501,51 @@ export const deleteUploadedFile = async(req: Request, res: Response): Promise<vo
         res.status(500).json({ error: "Failed to delete file" });
     }
 }
+
+
+//getting patient prescription for a particular booked appointment
+export const getPatientPrescriptionByAppointment = async(req: Request, res: Response): Promise<void> => {
+    try {
+        const patientId = (req as any).patient.id;
+        const { appointmentId } = req.params;
+        
+        const appointment = await prisma.appointment.findUnique({
+            where: { id: appointmentId }
+        });
+
+        if (!appointment) {
+            res.status(404).json({ error: "Appointment not found" });
+            return;
+        }
+
+        if (appointment.patientId !== patientId) {
+            res.status(403).json({ error: "Unauthorized: This appointment does not belong to you" });
+            return;
+        }
+
+        const prescription = await prisma.prescription.findFirst({
+            where: {
+                appointmentId: appointmentId,
+                patientId: patientId
+            },
+            include: {
+                doctor: {
+                    select: {
+                        id: true,
+                        name: true,
+                        specialization: true,
+                    }
+                }
+            }
+        });
+        if (!prescription) {
+            res.status(404).json({ error: "Prescription not found for this appointment" });
+            return;
+        }
+
+        res.status(200).json({ prescription });
+    } catch (error: any) {
+        console.error("Error fetching prescription:", error.message);
+        res.status(500).json({ error: "Failed to fetch prescription" });
+    }
+}

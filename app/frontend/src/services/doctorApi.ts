@@ -46,15 +46,66 @@ export interface Doctor {
     status: string;
     patient: Patient;
   }
- 
+
+  export interface PatientFile {
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: string;
+  }
+
+  export interface PrescriptionDetail {
+    id: string;
+    content: string;
+    pdfUrl?: string;
+    status: string;
+    createdAt: string;
+    issuedAt?: string;
+    expiresAt?: string;
+    appointment?: {
+      scheduledAt: string;
+      status: string;
+    };
+  }
+
+  export interface PatientDetail extends Patient {
+    prescriptions: PrescriptionDetail[];
+    uploadedFiles: PatientFile[];
+  }
+
+  export interface AppointmentDetail {
+    id: string;
+    scheduledAt: string;
+    duration: number;
+    status: string;
+    patient: PatientDetail;
+  }
+
 
   export const doctorApi = {
     //get all booked appointments
     getAllAppointments: async() => {
         const res = await api.get<{appointments: Appointment[]}>('/doctor/patients');
         return res.data.appointments;
+    },
+
+    // Get appointment details with patient and prescriptions
+    getAppointmentDetails: async(appointmentId: string) => {
+        const res = await api.get<{appointment: AppointmentDetail}>(`/doctor/appointments/${appointmentId}`);
+        return res.data.appointment;
+    },
+
+    // Create new prescription
+    createPrescription: async(data: {
+        patientId: string;
+        appointmentId: string;
+        content: string;
+    }) => {
+        const res = await api.post('/doctor/prescriptions', data);
+        return res.data.prescription;
     }
   }
-  
+
 
   export default doctorApi;

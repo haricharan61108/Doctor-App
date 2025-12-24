@@ -1,39 +1,80 @@
-import { FileText, Pill, AlertCircle, Download, Eye } from "lucide-react";
-import { Prescription } from "./patientDemoData";
+import { FileText, User, Calendar, Clock, AlertCircle, Eye } from "lucide-react";
+
+interface Prescription {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  appointmentId: string;
+  content: string;
+  status: string;
+  createdAt: string;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  doctor: {
+    id: string;
+    name: string;
+    specialization: string;
+  };
+  appointment?: {
+    scheduledAt: string;
+    status: string;
+  };
+}
 
 interface PatientPrescriptionsProps {
   prescriptions: Prescription[];
 }
 
 export default function PatientPrescriptions({ prescriptions }: PatientPrescriptionsProps) {
+
+  if (!prescriptions) {
+    return (
+      <div className="text-center py-16 bg-gray-50 rounded-xl border-2 
+border-dashed border-gray-200">
+        <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading
+ Prescriptions...</h3>
+        <p className="text-gray-600">Please wait while we fetch your
+prescriptions</p>
+      </div>
+    );
+  }
   const getStatusColor = (status: string): string => {
-    switch (status) {
-      case "dispensed":
+    switch (status.toUpperCase()) {
+      case "READY_FOR_PICKUP":
         return "bg-green-100 text-green-700 border-green-200";
-      case "approved":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "pending":
+      case "PENDING":
         return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "completed":
+      case "PICKED_UP":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "COMPLETED":
         return "bg-gray-100 text-gray-700 border-gray-200";
       default:
         return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "dispensed":
-        return "✓";
-      case "approved":
-        return "✓";
-      case "pending":
-        return "⏳";
-      case "completed":
-        return "✓";
+  const getStatusText = (status: string): string => {
+    switch (status.toUpperCase()) {
+      case "READY_FOR_PICKUP":
+        return "Ready for Pickup";
+      case "PENDING":
+        return "Pending";
+      case "PICKED_UP":
+        return "Picked Up";
+      case "COMPLETED":
+        return "Completed";
       default:
-        return "○";
+        return status;
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
@@ -66,106 +107,102 @@ export default function PatientPrescriptions({ prescriptions }: PatientPrescript
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-semibold text-gray-900 text-base md:text-lg">
-                      Prescription #{presc.prescription_number}
+                      Prescription #{presc.id.slice(0, 8).toUpperCase()}
                     </h3>
                     <div className="flex flex-wrap gap-2 mt-1 text-xs md:text-sm text-gray-600">
-                      <span>{presc.date}</span>
-                      <span>•</span>
-                      <span>{presc.clinic}</span>
+                      <span>{formatDate(presc.createdAt)}</span>
+                      {presc.appointment && (
+                        <>
+                          <span>•</span>
+                          <span>Appointment: {formatDate(presc.appointment.scheduledAt)}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
                 <span
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusColor(presc.status)} flex-shrink-0 flex items-center gap-1.5 self-start sm:self-center`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusColor(presc.status)} flex-shrink-0 self-start sm:self-center`}
                 >
-                  <span>{getStatusIcon(presc.status)}</span>
-                  {presc.status}
+                  {getStatusText(presc.status)}
                 </span>
               </div>
 
               {/* Body */}
               <div className="space-y-4">
-                {/* Symptoms */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm font-semibold text-gray-900">Symptoms</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {presc.symptoms.map((symptom, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs md:text-sm font-medium border border-red-100"
-                      >
-                        {symptom}
-                      </span>
-                    ))}
+                {/* Doctor Information */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">Prescribed by</h4>
+                      <p className="text-base md:text-lg font-bold text-gray-900">{presc.doctor.name}</p>
+                      <p className="text-sm text-gray-600">{presc.doctor.specialization}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Medications */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Pill className="h-4 w-4 text-gray-500" />
-                    <p className="text-sm font-semibold text-gray-900">Medications</p>
+                {/* Prescription Content */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Prescription Details
+                  </h4>
+                  <div className="bg-white p-4 rounded border border-gray-100">
+                    <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+                      {presc.content}
+                    </p>
                   </div>
-                  <div className="space-y-2.5">
-                    {presc.medicines.map((med, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 md:p-4 rounded-lg border border-blue-100"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                            <Pill className="h-4 w-4 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-gray-900 text-sm md:text-base mb-1">
-                              {med.name}
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs md:text-sm text-gray-700">
-                              <div>
-                                <span className="font-medium text-gray-600">Dosage:</span>{" "}
-                                <span className="font-semibold">{med.dosage}</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-600">Frequency:</span>{" "}
-                                <span>{med.frequency}</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-600">Duration:</span>{" "}
-                                <span>{med.duration}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                </div>
+
+                {/* Dates Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center gap-2 text-gray-600 mb-1">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-sm font-medium">Created On</span>
+                    </div>
+                    <p className="text-gray-900 font-semibold">
+                      {formatDate(presc.createdAt)}
+                    </p>
+                  </div>
+
+                  {presc.issuedAt && (
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center gap-2 text-gray-600 mb-1">
+                        <Clock className="h-4 w-4" />
+                        <span className="text-sm font-medium">Issued On</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <p className="text-gray-900 font-semibold">
+                        {formatDate(presc.issuedAt)}
+                      </p>
+                    </div>
+                  )}
 
-                {/* Notes */}
-                {presc.notes && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 md:p-4">
-                    <p className="text-xs font-semibold text-amber-900 mb-1">Important Notes</p>
-                    <p className="text-xs md:text-sm text-amber-800 leading-relaxed">{presc.notes}</p>
-                  </div>
-                )}
+                  {presc.expiresAt && (
+                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                      <div className="flex items-center gap-2 text-yellow-700 mb-1">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-sm font-medium">Expires On</span>
+                      </div>
+                      <p className="text-yellow-900 font-semibold">
+                        {formatDate(presc.expiresAt)}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Footer */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-gray-200">
                   <div className="text-xs md:text-sm text-gray-700">
-                    <span className="font-semibold text-gray-900">Prescribed by:</span>{" "}
-                    {presc.prescriber_name}
+                    <span className="font-semibold text-gray-900">Prescription ID:</span>{" "}
+                    {presc.id}
                   </div>
                   <div className="flex gap-2">
-                    <button className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-xs md:text-sm font-medium flex items-center justify-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      View Details
-                    </button>
                     <button className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-xs md:text-sm font-medium flex items-center justify-center gap-2">
-                      <Download className="h-4 w-4" />
-                      Download
+                      <Eye className="h-4 w-4" />
+                      View Full Details
                     </button>
                   </div>
                 </div>
@@ -180,25 +217,25 @@ export default function PatientPrescriptions({ prescriptions }: PatientPrescript
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-bold text-green-600">
-              {prescriptions.filter((p) => p.status === "dispensed").length}
+              {prescriptions.filter((p) => p.status.toUpperCase() === "PICKED_UP").length}
             </p>
-            <p className="text-xs md:text-sm text-green-700 font-medium mt-1">Dispensed</p>
+            <p className="text-xs md:text-sm text-green-700 font-medium mt-1">Picked Up</p>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-bold text-blue-600">
-              {prescriptions.filter((p) => p.status === "approved").length}
+              {prescriptions.filter((p) => p.status.toUpperCase() === "READY_FOR_PICKUP").length}
             </p>
-            <p className="text-xs md:text-sm text-blue-700 font-medium mt-1">Approved</p>
+            <p className="text-xs md:text-sm text-blue-700 font-medium mt-1">Ready</p>
           </div>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-bold text-yellow-600">
-              {prescriptions.filter((p) => p.status === "pending").length}
+              {prescriptions.filter((p) => p.status.toUpperCase() === "PENDING").length}
             </p>
             <p className="text-xs md:text-sm text-yellow-700 font-medium mt-1">Pending</p>
           </div>
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4 text-center">
             <p className="text-2xl md:text-3xl font-bold text-gray-600">
-              {prescriptions.filter((p) => p.status === "completed").length}
+              {prescriptions.filter((p) => p.status.toUpperCase() === "COMPLETED").length}
             </p>
             <p className="text-xs md:text-sm text-gray-700 font-medium mt-1">Completed</p>
           </div>

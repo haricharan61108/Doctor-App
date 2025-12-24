@@ -27,7 +27,8 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
 
   // In a real app, these would come from API calls
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [prescriptions] = useState(mockPrescriptions);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [loadingPrescriptions, setLoadingPrescriptions] = useState(true);
   const [medicalRecords] = useState(mockMedicalRecords);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
 
@@ -45,6 +46,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
 
     fetchDoctors();
     fetchAppointments();
+    fetchPrescriptions();
   }, []);
   
   //to fetch appointments
@@ -83,6 +85,20 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
       setLoadingAppointments(false);
     }
   }
+
+  const fetchPrescriptions = async() => {
+    try {
+      setLoadingPrescriptions(true);
+      const prescriptionsData = await patientApi.getMyPrescriptions();
+      setPrescriptions(prescriptionsData);
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+      alert('Failed to load prescriptions. Please try again.');
+    } finally {
+      setLoadingPrescriptions(false);
+    }
+  }
+
   const handleBookAppointment = async (bookingData: BookingData) => {
     console.log("Booking appointment:", bookingData);
 
@@ -217,7 +233,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
             )}
 
             {activeTab === "prescriptions" && (
-              <PatientPrescriptions prescriptions={prescriptions} />
+              <PatientPrescriptions prescriptions={prescriptions || []} />
             )}
 
             {activeTab === "records" && <PatientMedicalRecords records={medicalRecords} />}

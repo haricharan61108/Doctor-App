@@ -87,15 +87,26 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({ message: "Logout successful" });
 }
 
-// Get all patients with appointments for this doctor
+// Get all patients with appointments for this doctor (only today's appointments)
 export const getAllPatients = async (req: Request, res: Response): Promise<void> => {
     try {
         const doctorId = (req as any).doctor.id;
 
+        // Get start and end of today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+
         const appointments = await prisma.appointment.findMany({
             where: {
                 doctorId,
-                status: "BOOKED"
+                status: "BOOKED",
+                scheduledAt: {
+                    gte: today,  // Greater than or equal to start of today
+                    lt: tomorrow  
+                }
             },
             include: {
                 patient: {
@@ -154,6 +165,11 @@ export const getPatientWithPrescriptions = async (req: Request, res: Response): 
                             }
                         }
                     }
+                },
+                uploadedFiles: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -176,7 +192,7 @@ export const createPrescription = async (req: Request, res: Response): Promise<v
         const doctorId = (req as any).doctor.id;
         const { patientId, appointmentId, content } = req.body;
 
-        if (!patientId || !content) {
+        if (!patientId || !content || !appointmentId) {
             res.status(400).json({ error: "Patient ID and content are required" });
             return;
         }
@@ -190,13 +206,27 @@ export const createPrescription = async (req: Request, res: Response): Promise<v
             res.status(404).json({ error: "Patient not found" });
             return;
         }
+        
+        // Verify appointment exists
+        const appointment = await prisma.appointment.findUnique({
+            where: { id: appointmentId },
+        });
 
+        if(!appointmentId) {
+            res.status(404).json({ error: "Appointment ID is required" });
+            return ;
+        }
+
+        if (appointment && appointment.doctorId !== doctorId) {
+            res.status(403).json({ error: "Unauthorized: This appointment does not belong to you" });
+            return;
+        }
         // Create prescription
         const prescription = await prisma.prescription.create({
             data: {
                 patientId,
                 doctorId,
-                appointmentId: appointmentId || null,
+                appointmentId: appointmentId,
                 content,
                 status: "PENDING"
             },
@@ -210,7 +240,12 @@ export const createPrescription = async (req: Request, res: Response): Promise<v
                 }
             }
         });
-
+         await prisma.appointment.update({
+            where: { id: appointmentId },
+            data: {
+                status: "COMPLETED"
+            }
+        })
         res.status(201).json({ message: "Prescription created", prescription });
     } catch (error: any) {
         console.error("Error creating prescription:", error.message);
@@ -310,3 +345,77 @@ export const deletePrescription = async (req: Request, res: Response): Promise<v
         res.status(500).json({ error: "Failed to delete prescription" });
     }
 }
+
+ // Get appointment details with patient and prescriptions
+ export const getAppointmentDetails = async (req: Request, res:
+    Response): Promise<void> => {
+        try {
+            // 1. Extract doctorId from authenticated request
+            const doctorId = (req as any).doctor.id;
+  
+            // 2. Extract appointmentId from URL params
+            const { appointmentId } = req.params;
+  
+            // 3. Validation
+            if (!appointmentId) {
+                res.status(400).json({ error: "Appointment ID is required"
+    });
+                return;
+            }
+
+            const appointment = await prisma.appointment.findUnique({
+                where: { id: appointmentId },
+                include: {
+                    patient: {
+                        select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                            avatarUrl: true,
+                            phone: true,
+                            prescriptions: {
+                                where: {
+                                    doctorId
+                                },
+                                orderBy: {
+                                    createdAt: 'desc'
+                                },
+                                include: {
+                                    appointment: {
+                                        select: {
+                                            scheduledAt: true,
+                                            status: true
+                                        }
+                                    }
+                                }
+                            },
+                            uploadedFiles: {
+                                orderBy: {
+                                    uploadedAt: 'desc'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+  
+            // 5. Verify appointment exists
+            if (!appointment) {
+                res.status(404).json({ error: "Appointment not found" });
+                return;
+            }
+  
+            // 6. Verify appointment belongs to this doctor (security check)
+            if (appointment.doctorId !== doctorId) {
+                res.status(403).json({ error: "Unauthorized: This  appointment does not belong to you" });
+                return;
+            }
+  
+            // 7. Return complete data
+            res.status(200).json({ appointment });
+        } catch (error: any) {
+            console.error("Error fetching appointment details:",
+    error.message);
+            res.status(500).json({ error: "Failed to fetch appointment  details" });
+        }
+    }

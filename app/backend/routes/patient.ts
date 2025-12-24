@@ -7,7 +7,8 @@ import {
     bookAppointment,
     uploadPrescriptionPDF,
     getMyUploadedFiles,
-    deleteUploadedFile
+    deleteUploadedFile,
+    getPatientPrescriptionByAppointment
 } from "../controllers/patientControllers";
 import { patientMiddleware } from "../middleware/patientMiddleware";
 import { uploadPrescription } from "../utils/multerConfig";
@@ -33,6 +34,8 @@ patientRouter.get("/appointments", getMyAppointments);
 // Get patient's own prescriptions
 patientRouter.get("/prescriptions", getMyPrescriptions);
 
+//Get patient prescription for a particular booked appointment
+patientRouter.get("/prescriptions/:appointmentId", getPatientPrescriptionByAppointment);
 //File uploads
 patientRouter.post("/files/upload", (req: Request, res: Response, next: NextFunction) => {
     console.log('🎯 Upload route hit! Method:', req.method, 'URL:', req.url);

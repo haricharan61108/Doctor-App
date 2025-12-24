@@ -4,7 +4,8 @@ import {
     getPatientWithPrescriptions,
     createPrescription,
     finalizePrescription,
-    deletePrescription
+    deletePrescription,
+    getAppointmentDetails
 } from "../controllers/doctorControllers";
 import { doctorMiddleware } from "../middleware/doctorMiddleware";
 
@@ -27,3 +28,5 @@ doctorRouter.patch("/prescriptions/:prescriptionId/finalize", finalizePrescripti
 
 // Delete pending prescription
 doctorRouter.delete("/prescriptions/:prescriptionId", deletePrescription);
+
+doctorRouter.get("/appointments/:appointmentId", getAppointmentDetails);
