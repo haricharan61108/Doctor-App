@@ -15,6 +15,7 @@ import LoginPage from "./components/login-page";
 import { PatientDashboard } from "./components/patient";
 import { DoctorDashboard as NewDoctorDashboard } from "./components/doctor";
 import { PharmacistDashboard } from "./components/pharmacist";
+import Dialog from "./components/common/Dialog";
 
 // ==================== TYPE DEFINITIONS ====================
 interface Student {
@@ -415,6 +416,17 @@ function StudentDashboard({ user }: StudentDashboardProps) {
   const [showBooking, setShowBooking] = useState<boolean>(false);
   const [bookingData, setBookingData] = useState<BookingData>({ doctor_id: "", date: "", time: "", reason: "" });
   const [loading, setLoading] = useState<boolean>(true);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -453,7 +465,12 @@ function StudentDashboard({ user }: StudentDashboardProps) {
 
   const handleBookAppointment = async () => {
     if (!selectedStudent || !bookingData.doctor_id || !bookingData.date || !bookingData.time) {
-      alert("Please fill all fields");
+      setDialog({
+        isOpen: true,
+        title: 'Missing Information',
+        message: 'Please fill all fields',
+        type: 'warning'
+      });
       return;
     }
     const doctor = doctors.find(d => d.id === bookingData.doctor_id);
@@ -469,11 +486,21 @@ function StudentDashboard({ user }: StudentDashboardProps) {
       });
       setShowBooking(false);
       setBookingData({ doctor_id: "", date: "", time: "", reason: "" });
-      alert("Appointment booked successfully!");
+      setDialog({
+        isOpen: true,
+        title: 'Appointment Booked',
+        message: 'Appointment booked successfully!',
+        type: 'success'
+      });
       loadData();
     } catch (error) {
       console.error("Failed to book appointment:", error);
-      alert("Failed to book appointment. Please try again.");
+      setDialog({
+        isOpen: true,
+        title: 'Booking Failed',
+        message: 'Failed to book appointment. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -501,6 +528,15 @@ function StudentDashboard({ user }: StudentDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
+
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-8">
@@ -843,6 +879,17 @@ function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [newPrescription, setNewPrescription] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<string>("summary");
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   // Mock AI summary for demo
   const aiSummary = `Patient presents with chronic respiratory issues. Previous consultations indicate mild asthma with seasonal triggers. No known drug allergies except Penicillin. Blood group O+ with no major chronic conditions besides asthma. Recommend continued monitoring and preventive care.`;
@@ -894,10 +941,20 @@ function DoctorDashboard({ user }: DoctorDashboardProps) {
 
   const handleSubmitPrescription = () => {
     if (!newPrescription.trim()) {
-      alert("Please enter prescription details");
+      setDialog({
+        isOpen: true,
+        title: 'Missing Information',
+        message: 'Please enter prescription details',
+        type: 'warning'
+      });
       return;
     }
-    alert("Prescription submitted successfully!");
+    setDialog({
+      isOpen: true,
+      title: 'Prescription Submitted',
+      message: 'Prescription submitted successfully!',
+      type: 'success'
+    });
     setNewPrescription("");
     // In real app, would call API and remove from doctor's pending list
   };
@@ -926,6 +983,15 @@ function DoctorDashboard({ user }: DoctorDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
+
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
@@ -1200,9 +1266,23 @@ function App() {
     const savedUser = localStorage.getItem('healthcare_user');
     return savedUser ? JSON.parse(savedUser): null;
   })
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
-  const handleLogin = async (credentials: { role: string; credentials: { email?: string; password?: string; name?: string; googleId?: string; avatarUrl?: string } }) => {
+  const handleLogin = async (credentials: { role: string; credentials: { email?: string; password?: string; idToken?: string; name?: string; googleId?: string; avatarUrl?: string } }) => {
     try {
+      // Clear any previous error dialogs
+      setDialog({ isOpen: false, title: '', message: '', type: 'info' });
+
       if (credentials.role === "patient") {
         // Patient Google OAuth
         const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
@@ -1211,12 +1291,9 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include', // Important: Include cookies
+          credentials: 'include',
           body: JSON.stringify({
-            email: credentials.credentials.email,
-            name: credentials.credentials.name,
-            googleId: credentials.credentials.googleId,
-            avatarUrl: credentials.credentials.avatarUrl
+           idToken: credentials.credentials.idToken
           })
         });
 
@@ -1229,7 +1306,7 @@ function App() {
 
         const userData: UserData = {
           role: "student",
-          name: data.patient.name || credentials.credentials.email?.split('@')[0] || "Patient",
+          name: data.patient.name || "Patient",
           id: data.patient.id
         };
 
@@ -1265,19 +1342,47 @@ function App() {
 
         localStorage.setItem('healthcare_user', JSON.stringify(userData));
         setUser(userData);
-      } else {
-        // Pharmacist (mock for now)
+      } else if (credentials.role === "pharmacist") {
+        // Pharmacist login
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+        const response = await fetch(`${API_URL}/auth/pharmacist/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email: credentials.credentials.email,
+            password: credentials.credentials.password
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Login failed');
+        }
+
+        const data = await response.json();
+
         const userData: UserData = {
           role: "pharmacist",
-          name: credentials.credentials.email?.split('@')[0] || "Pharmacist",
-          id: "PH001"
+          name: data.pharmacist.name || credentials.credentials.email?.split('@')[0] || "Pharmacist",
+          id: data.pharmacist.id
         };
+
         localStorage.setItem('healthcare_user', JSON.stringify(userData));
         setUser(userData);
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setDialog({
+        isOpen: true,
+        title: 'Login Failed',
+        message: `Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error'
+      });
+      // Rethrow so the login form can also handle the error
+      throw error;
     }
   };
 
@@ -1298,6 +1403,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
+
       <Header user={user} onLogout={handleLogout} />
       {user.role === "student" && <PatientDashboard userName={user.name} />}
       {user.role === "doctor" && <NewDoctorDashboard userName={user.name} />}

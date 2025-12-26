@@ -68,10 +68,10 @@ model PatientFile {
   patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
   patientId String
 
-  fileName String // Original filename
-  fileUrl  String // Storage URL
-  fileType String @default("application/pdf") // Validate PDF
-  fileSize Int? // In bytes
+  fileName String
+  fileUrl  String 
+  fileType String @default("application/pdf") 
+  fileSize Int? 
 
   uploadedAt DateTime @default(now())
 
@@ -87,14 +87,14 @@ model DoctorTiming {
   doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId String
 
-  startTime DateTime // Full timestamp: 2025-12-25T09:00:00
-  endTime   DateTime // Full timestamp: 2025-12-25T17:00:00
-  isBooked  Boolean  @default(false) // Track if slot is booked
+  startTime DateTime 
+  endTime   DateTime 
+  isBooked  Boolean  @default(false) 
 
   createdAt DateTime @default(now())
 
   @@index([doctorId])
-  @@index([startTime]) // For querying available slots
+  @@index([startTime]) 
 }
 
 model Appointment {
@@ -105,11 +105,11 @@ model Appointment {
   doctor   Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   doctorId String
 
-  scheduledAt DateTime // Renamed from 'time' for clarity
-  duration    Int               @default(30) // Duration in minutes
+  scheduledAt DateTime 
+  duration    Int               @default(30) 
   status      AppointmentStatus @default(BOOKED)
 
-  prescriptions Prescription[] // Link prescriptions to appointments
+  prescriptions Prescription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -140,13 +140,13 @@ model Prescription {
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   appointmentId String?
 
-  content String             @db.Text // Prescription details
-  pdfUrl  String? // Generated PDF
+  content String             @db.Text 
+  pdfUrl  String? 
   status  PrescriptionStatus @default(PENDING)
 
-  issuedAt    DateTime? // When doctor finalizes (status → READY_FOR_PICKUP)
-  dispensedAt DateTime? // When patient picks up (status → PURCHASED)
-  expiresAt   DateTime? // Auto-set to issuedAt + 2 days
+  issuedAt    DateTime? 
+  dispensedAt DateTime? 
+  expiresAt   DateTime? 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -156,13 +156,13 @@ model Prescription {
   @@index([pharmacyId])
   @@index([appointmentId])
   @@index([status])
-  @@index([expiresAt]) // Critical for cleanup job
+  @@index([expiresAt]) 
 }
 
 enum PrescriptionStatus {
-  PENDING // Doctor is writing
-  READY_FOR_PICKUP // Doctor finalized, sent to pharmacy
-  PURCHASED // Patient picked up
-  EXPIRED // Auto-expired after 2 days
+  PENDING 
+  READY_FOR_PICKUP 
+  PURCHASED 
+  EXPIRED 
   CANCELLED
 }

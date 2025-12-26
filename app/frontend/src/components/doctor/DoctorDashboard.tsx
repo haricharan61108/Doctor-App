@@ -3,6 +3,7 @@ import { Stethoscope, Users, FileText, Clock, Calendar, User, Mail,
   import { useState, useEffect } from "react";
   import doctorApi, { Appointment } from "../../services/doctorApi";
   import AppointmentDetailModal from "./AppointmentDetailModal";
+  import Dialog from "../common/Dialog";
 
 interface DoctorDashboardProps {
   userName: string;
@@ -14,6 +15,17 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
   const[loading, setLoading] = useState(true);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   useEffect(()=> {
     const fetchAppointments = async()=> {
@@ -23,7 +35,12 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
         setAppointments(data);
       } catch (error) {
         console.error('Error fetching appointments:', error);
-        alert('Failed to load appointments. Please try again.');
+        setDialog({
+          isOpen: true,
+          title: 'Error Loading Appointments',
+          message: 'Failed to load appointments. Please try again.',
+          type: 'error'
+        });
       } finally {
         setLoading(false);
       }
@@ -51,6 +68,15 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
   };
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
+
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">

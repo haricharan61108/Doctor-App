@@ -2,6 +2,21 @@ import prisma from "../src/lib/prisma";
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { generateToken } from "../utils/generateToken";
+import { supabase } from "../utils/supabaseStorage";
+
+// Helper function to add download URLs to files
+const addDownloadUrls = (files: any[]) => {
+    return files.map(file => {
+        const { data: urlData } = supabase.storage
+            .from('prescriptions')
+            .getPublicUrl(file.fileUrl);
+
+        return {
+            ...file,
+            downloadUrl: urlData.publicUrl
+        };
+    });
+};
 
 export const login = async(req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;
@@ -39,7 +54,6 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check if doctor already exists
         const existingDoctor = await prisma.doctor.findUnique({
             where: { email }
         });
@@ -49,10 +63,8 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create doctor
         const doctor = await prisma.doctor.create({
             data: {
                 email,
@@ -62,10 +74,8 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
             }
         });
 
-        // Generate token and set cookie
         generateToken(doctor.id, res);
 
-        // Remove password from response
         const { password: _, ...doctorWithoutPassword } = doctor;
         res.status(201).json({
             message: "Doctor account created successfully",
@@ -94,17 +104,17 @@ export const getAllPatients = async (req: Request, res: Response): Promise<void>
 
         // Get start and end of today
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today
+        today.setHours(0, 0, 0, 0); 
 
         const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+        tomorrow.setDate(tomorrow.getDate() + 1); 
 
         const appointments = await prisma.appointment.findMany({
             where: {
                 doctorId,
                 status: "BOOKED",
                 scheduledAt: {
-                    gte: today,  // Greater than or equal to start of today
+                    gte: today,  
                     lt: tomorrow  
                 }
             },
@@ -179,7 +189,12 @@ export const getPatientWithPrescriptions = async (req: Request, res: Response): 
             return;
         }
 
-        res.status(200).json({ patient });
+        const patientWithUrls = {
+            ...patient,
+            uploadedFiles: addDownloadUrls(patient.uploadedFiles)
+        };
+
+        res.status(200).json({ patient: patientWithUrls });
     } catch (error: any) {
         console.error("Error fetching patient details:", error.message);
         res.status(500).json({ error: "Failed to fetch patient details" });
@@ -197,7 +212,6 @@ export const createPrescription = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Verify patient exists
         const patient = await prisma.patient.findUnique({
             where: { id: patientId }
         });
@@ -222,13 +236,18 @@ export const createPrescription = async (req: Request, res: Response): Promise<v
             return;
         }
         // Create prescription
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now
+
         const prescription = await prisma.prescription.create({
             data: {
                 patientId,
                 doctorId,
                 appointmentId: appointmentId,
                 content,
-                status: "PENDING"
+                status: "READY_FOR_PICKUP",
+                issuedAt: now,
+                expiresAt: expiresAt
             },
             include: {
                 patient: {
@@ -264,7 +283,6 @@ export const finalizePrescription = async (req: Request, res: Response): Promise
             return;
         }
 
-        // Verify prescription belongs to doctor
         const prescription = await prisma.prescription.findUnique({
             where: { id: prescriptionId }
         });
@@ -287,7 +305,6 @@ export const finalizePrescription = async (req: Request, res: Response): Promise
         const now = new Date();
         const expiresAt = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days
 
-        // Update prescription status
         const updatedPrescription = await prisma.prescription.update({
             where: { id: prescriptionId },
             data: {
@@ -304,7 +321,7 @@ export const finalizePrescription = async (req: Request, res: Response): Promise
     }
 }
 
-// Delete pending prescription
+
 export const deletePrescription = async (req: Request, res: Response): Promise<void> => {
     try {
         const doctorId = (req as any).doctor.id;
@@ -350,7 +367,6 @@ export const deletePrescription = async (req: Request, res: Response): Promise<v
  export const getAppointmentDetails = async (req: Request, res:
     Response): Promise<void> => {
         try {
-            // 1. Extract doctorId from authenticated request
             const doctorId = (req as any).doctor.id;
   
             // 2. Extract appointmentId from URL params
@@ -410,9 +426,18 @@ export const deletePrescription = async (req: Request, res: Response): Promise<v
                 res.status(403).json({ error: "Unauthorized: This  appointment does not belong to you" });
                 return;
             }
-  
-            // 7. Return complete data
-            res.status(200).json({ appointment });
+
+            // 7. Add download URLs to uploaded files
+            const appointmentWithUrls = {
+                ...appointment,
+                patient: {
+                    ...appointment.patient,
+                    uploadedFiles: addDownloadUrls(appointment.patient.uploadedFiles)
+                }
+            };
+
+            // 8. Return complete data
+            res.status(200).json({ appointment: appointmentWithUrls });
         } catch (error: any) {
             console.error("Error fetching appointment details:",
     error.message);

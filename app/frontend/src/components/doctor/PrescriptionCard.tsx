@@ -1,6 +1,8 @@
 import { FileText, Calendar, Clock } from "lucide-react";
 import { PrescriptionDetail } from "../../services/doctorApi";
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
 interface PrescriptionCardProps {
   prescription: PrescriptionDetail;
 }
@@ -83,15 +85,16 @@ export default function PrescriptionCard({ prescription }: PrescriptionCardProps
         <div className="mt-3">
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             <iframe
-              src={`http://localhost:3001${prescription.pdfUrl}`}
+              src={`${API_URL}${prescription.pdfUrl}`}
               width="100%"
               height="400px"
               title="Prescription PDF"
               className="bg-white"
+              onError={(e) => console.error('Failed to load PDF:', e)}
             />
           </div>
           <a
-            href={`http://localhost:3001${prescription.pdfUrl}`}
+            href={`${API_URL}${prescription.pdfUrl}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-700 text-sm mt-2 inline-block"

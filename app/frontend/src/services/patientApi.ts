@@ -62,6 +62,7 @@ export interface PatientFile {
   fileType: string;
   fileSize: number;
   uploadedAt: string;
+  downloadUrl?: string; // Public URL for downloading/viewing the file
 }
 
 export interface Prescription {

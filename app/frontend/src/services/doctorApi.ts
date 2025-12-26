@@ -53,6 +53,7 @@ export interface Doctor {
     fileUrl: string;
     fileSize: number;
     uploadedAt: string;
+    downloadUrl?: string; // URL for downloading/viewing the file
   }
 
   export interface PrescriptionDetail {

@@ -2,24 +2,47 @@ import prisma from "../src/lib/prisma";
 import type { Request, Response } from "express";
 import { generatePatientToken } from "../utils/generateToken";
 import { generateDefaultTimeSlots } from "../utils/defaultTimeSlots";
+import { OAuth2Client } from 'google-auth-library';
+import { uploadFileToSupabase,deleteFileFromSupabase, supabase } from "../utils/supabaseStorage";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Google OAuth login/signup - expects Google user data
 export const googleAuth = async(req: Request, res: Response): Promise<void> => {
-    const { email, name, googleId, avatarUrl } = req.body;
-
-    if (!email) {
-        res.status(400).json({ error: "Email required" });
-        return;
+    const { idToken } = req.body;
+    if(!idToken) {
+        res.status(400).json({ error: "ID token required" });
+        return ;
     }
 
     try {
-        // Find existing patient or create new one
-        let patient = await prisma.patient.findUnique({
-            where: { email }
+        const ticket = await client.verifyIdToken({
+            idToken: idToken,
+            audience: process.env.GOOGLE_CLIENT_ID
         });
 
+        const payload = ticket.getPayload();
+
+        if(!payload || !payload.email) {
+            res.status(400).json({ error: "Invalid ID token" });
+            return ;
+        } 
+
+        const email = payload.email;
+        const name = payload.name || null;
+        const googleId = payload.sub;
+        const avatarUrl = payload.picture || null;
+
+        if(!payload.email_verified) {
+            res.status(400).json({ error: "Email not verified" });        
+            return ;
+        }
+        let patient = await prisma.patient.findUnique({
+            where: {
+                email
+            }
+        })
         if (!patient) {
-            // Create new patient
             patient = await prisma.patient.create({
                 data: {
                     email,
@@ -29,7 +52,6 @@ export const googleAuth = async(req: Request, res: Response): Promise<void> => {
                 }
             });
         } else {
-            // Update existing patient with Google info if not already set
             if (!patient.googleId && googleId) {
                 patient = await prisma.patient.update({
                     where: { email },
@@ -241,7 +263,7 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
             }
         });
 
-        // If custom timings exist, return them (filtered for availability)
+
         if (customTimings.length > 0) {
             const availableTimings = customTimings.filter(timing => !timing.isBooked);
             res.status(200).json({ timings: availableTimings });
@@ -251,7 +273,7 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
         // Generate default time slots if no custom timings
         const defaultSlots = generateDefaultTimeSlots(targetDate);
 
-        // Get all appointments for this doctor on this date to mark slots as booked
+
         const existingAppointments = await prisma.appointment.findMany({
             where: {
                 doctorId,
@@ -280,7 +302,7 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
             });
 
             return {
-                id: `default-${slot.startTime.getTime()}`, // Temporary ID for frontend
+                id: `default-${slot.startTime.getTime()}`, 
                 doctorId,
                 startTime: slot.startTime,
                 endTime: slot.endTime,
@@ -289,7 +311,6 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
             };
         });
 
-        // Filter out booked slots and past time slots (if today)
         const now = new Date();
         const availableTimings = timingsWithBookingStatus.filter(timing => {
             if (timing.isBooked) return false;
@@ -335,7 +356,7 @@ export const bookAppointment = async(req: Request, res: Response): Promise<void>
         const appointmentEnd = new Date(appointmentStart);
         appointmentEnd.setMinutes(appointmentEnd.getMinutes() + appointmentDuration);
 
-        // Check if timingId is a custom timing (not a default slot)
+
         const isCustomTiming = timingId && !timingId.startsWith('default-');
 
         if(isCustomTiming) {
@@ -361,7 +382,7 @@ export const bookAppointment = async(req: Request, res: Response): Promise<void>
                 data: { isBooked: true }
             });
         } else {
-            // For default slots, check if there's any conflicting appointment
+
             const conflictingAppointment = await prisma.appointment.findFirst({
                 where: {
                     doctorId,
@@ -430,12 +451,13 @@ export const uploadPrescriptionPDF = async(req: Request, res: Response): Promise
         }
 
         const file = req.file;
+        const {path, url} = await uploadFileToSupabase(file, patientId);
 
         const patientFile = await prisma.patientFile.create({
             data: {
                 patientId,
                   fileName: file.originalname,
-                  fileUrl: `/uploads/prescriptions/${file.filename}`,
+                  fileUrl: path,
                   fileType: file.mimetype,
                   fileSize: file.size
             }
@@ -443,7 +465,10 @@ export const uploadPrescriptionPDF = async(req: Request, res: Response): Promise
 
         res.status(201).json({
             message: "Prescription uploaded successfully",
-            file: patientFile
+            file: {
+                ...patientFile,
+                downloadUrl: url 
+            }
         });
     } catch (error: any) {
         console.error("❌ Error uploading prescription:", error.message);
@@ -464,8 +489,19 @@ export const getMyUploadedFiles = async(req: Request, res: Response): Promise<vo
                   uploadedAt: 'desc'
               }
           });
+          
+          const filesWithUrls = files.map(file => {
+            const { data: urlData } = supabase.storage
+                .from('prescriptions')
+                .getPublicUrl(file.fileUrl);
 
-          res.status(200).json({ files });
+            return {
+                ...file,
+                downloadUrl: urlData.publicUrl
+            };
+        });
+
+        res.status(200).json({ files: filesWithUrls });
     } catch (error: any) {
         console.error("Error fetching uploaded files:", error.message);
           res.status(500).json({ error: "Failed to fetch uploaded files"});
@@ -490,6 +526,8 @@ export const deleteUploadedFile = async(req: Request, res: Response): Promise<vo
             res.status(403).json({ error: "Unauthorized" });
             return;
         }
+        
+        await deleteFileFromSupabase(file.fileUrl);
 
         await prisma.patientFile.delete({
             where: { id: fileId }

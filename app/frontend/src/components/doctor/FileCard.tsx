@@ -67,7 +67,7 @@ export default function FileCard({ file }: FileCardProps) {
         <div className="border-t border-gray-200 p-4 bg-gray-50">
           <div className="border border-gray-300 rounded-lg overflow-hidden bg-white">
             <iframe
-              src={`http://localhost:3001${file.fileUrl}`}
+              src={file.downloadUrl || file.fileUrl}
               width="100%"
               height="500px"
               title={file.fileName}
@@ -75,7 +75,7 @@ export default function FileCard({ file }: FileCardProps) {
             />
           </div>
           <a
-            href={`http://localhost:3001${file.fileUrl}`}
+            href={file.downloadUrl || file.fileUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 hover:text-blue-700 text-sm mt-2 inline-block"

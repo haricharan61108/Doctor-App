@@ -3,6 +3,7 @@ import { MedicalRecord } from "./patientDemoData";
 import React, { useState, useEffect } from "react";
 import { Upload, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import patientApi, { PatientFile } from "../../services/patientApi";
+import Dialog from "../common/Dialog";
 
 interface PatientMedicalRecordsProps {
   records: MedicalRecord[];
@@ -13,6 +14,19 @@ export default function PatientMedicalRecords({ records }: PatientMedicalRecords
   const [uploading, setUploading] = useState(false);
   const [loadingFiles, setLoadingFiles] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+    onConfirm?: () => void;
+    showCancel?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   useEffect(() => {
     fetchUploadedFiles();
@@ -54,7 +68,12 @@ export default function PatientMedicalRecords({ records }: PatientMedicalRecords
       const result = await patientApi.uploadPrescriptionFile(file);
 
       setUploadedFiles(prev => [result.file, ...prev]);
-      alert(result.message);
+      setDialog({
+        isOpen: true,
+        title: 'Upload Successful',
+        message: result.message,
+        type: 'success'
+      });
 
       event.target.value = '';
     } catch (err: any) {
@@ -64,19 +83,29 @@ export default function PatientMedicalRecords({ records }: PatientMedicalRecords
     }
   }
 
-  const handleDeleteFile = async (fileId: string, fileName: string) => {
-    if (!window.confirm(`Are you sure you want to delete ${fileName}?`)) {
-      return;
-    }
-
-    try {
-      await patientApi.deleteUploadedFile(fileId);
-      setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
-      alert('File deleted successfully');
-    } catch (err: any) {
-      console.error('Error deleting file:', err);
-      setError(err.response?.data?.error || 'Failed to delete file');
-    }
+  const handleDeleteFile = (fileId: string, fileName: string) => {
+    setDialog({
+      isOpen: true,
+      title: 'Delete File',
+      message: `Are you sure you want to delete ${fileName}?`,
+      type: 'warning',
+      showCancel: true,
+      onConfirm: async () => {
+        try {
+          await patientApi.deleteUploadedFile(fileId);
+          setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+          setDialog({
+            isOpen: true,
+            title: 'File Deleted',
+            message: 'File deleted successfully',
+            type: 'success'
+          });
+        } catch (err: any) {
+          console.error('Error deleting file:', err);
+          setError(err.response?.data?.error || 'Failed to delete file');
+        }
+      }
+    });
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -118,6 +147,17 @@ export default function PatientMedicalRecords({ records }: PatientMedicalRecords
 
   return (
     <div>
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+        onConfirm={dialog.onConfirm}
+        showCancel={dialog.showCancel}
+      />
+
      {/* File Upload Section */}
   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
     <div className="flex flex-col sm:flex-row items-start sm:items-center 
@@ -207,7 +247,7 @@ export default function PatientMedicalRecords({ records }: PatientMedicalRecords
                 </div>
                 <div className="flex items-center gap-2">
                   <a
-                    href={`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}${file.fileUrl}`}
+                    href={file.downloadUrl || file.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium flex items-center gap-1"

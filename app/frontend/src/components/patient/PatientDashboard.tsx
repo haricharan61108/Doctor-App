@@ -13,6 +13,7 @@ import {
   Doctor,
 } from "./patientDemoData";
 import patientApi from "../../services/patientApi";
+import Dialog from "../common/Dialog";
 
 interface PatientDashboardProps {
   userName: string;
@@ -31,6 +32,17 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(true);
   const [medicalRecords] = useState(mockMedicalRecords);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   // Fetch doctors on component mount
   useEffect(() => {
@@ -40,7 +52,12 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
         setDoctors(doctorsData);
       } catch (error) {
         console.error('Error fetching doctors:', error);
-        alert('Failed to load doctors. Please try again.');
+        setDialog({
+          isOpen: true,
+          title: 'Error Loading Doctors',
+          message: 'Failed to load doctors. Please try again.',
+          type: 'error'
+        });
       }
     };
 
@@ -80,7 +97,12 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
             setAppointments(transformedAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      alert('Failed to load appointments. Please try again.');
+      setDialog({
+        isOpen: true,
+        title: 'Error Loading Appointments',
+        message: 'Failed to load appointments. Please try again.',
+        type: 'error'
+      });
     }finally {
       setLoadingAppointments(false);
     }
@@ -93,7 +115,12 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
       setPrescriptions(prescriptionsData);
     } catch (error) {
       console.error('Error fetching prescriptions:', error);
-      alert('Failed to load prescriptions. Please try again.');
+      setDialog({
+        isOpen: true,
+        title: 'Error Loading Prescriptions',
+        message: 'Failed to load prescriptions. Please try again.',
+        type: 'error'
+      });
     } finally {
       setLoadingPrescriptions(false);
     }
@@ -128,10 +155,12 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
         timingId: bookingData.timingId,
       });
 
-      alert(
-        `${result.message}\n\nDoctor: ${result.appointment.doctor.name}\nDate:
-       ${bookingData.date}\nTime: ${bookingData.time}`
-      );
+      setDialog({
+        isOpen: true,
+        title: 'Appointment Booked Successfully',
+        message: `${result.message}\n\nDoctor: ${result.appointment.doctor.name}\nDate: ${bookingData.date}\nTime: ${bookingData.time}`,
+        type: 'success'
+      });
 
       // Optionally refresh appointments list here
       await fetchAppointments();
@@ -139,7 +168,12 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
     } catch (error: any) {
       console.error('Error booking appointment:', error);
       const errorMessage = error.response?.data?.error || 'Failed to book appointment';
-      alert(`Error: ${errorMessage}`);
+      setDialog({
+        isOpen: true,
+        title: 'Booking Failed',
+        message: `Error: ${errorMessage}`,
+        type: 'error'
+      });
     }
   };
 
@@ -166,6 +200,15 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialog.isOpen}
+        onClose={() => setDialog({ ...dialog, isOpen: false })}
+        title={dialog.title}
+        message={dialog.message}
+        type={dialog.type}
+      />
+
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
         {/* Header Section */}
         <div className="mb-6 md:mb-8">
