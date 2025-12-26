@@ -8,7 +8,7 @@ export const generateToken=(doctorId: string, res: Response)=> {
     });
     res.cookie("jwt",token,{
         httpOnly:true,
-        sameSite:"strict",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         secure: process.env.NODE_ENV === "production",
         maxAge:7 * 24 * 60 * 60 * 1000,
     })
@@ -22,7 +22,7 @@ export const generatePatientToken=(patientId: string, res: Response)=> {
     });
     res.cookie("jwt_patient",token,{
         httpOnly:true,
-        sameSite:"strict",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         secure: process.env.NODE_ENV === "production",
         maxAge:7 * 24 * 60 * 60 * 1000,
     })
@@ -36,7 +36,7 @@ export const generatePharmacistToken=(pharmacistId: string, res: Response)=> {
     });
     res.cookie("jwt_pharmacist",token,{
         httpOnly:true,
-        sameSite:"strict",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         secure: process.env.NODE_ENV === "production",
         maxAge:7 * 24 * 60 * 60 * 1000,
     })
