@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, FileText, FolderOpen, User } from "lucide-react";
+import { Calendar, FileText, User, FolderOpen } from "lucide-react";
 import PatientHealthStats from "./PatientHealthStats";
 import PatientAppointments from "./PatientAppointments";
 import PatientPrescriptions from "./PatientPrescriptions";
@@ -7,9 +7,6 @@ import PatientMedicalRecords from "./PatientMedicalRecords";
 import PatientBookingModal, { BookingData } from "./PatientBookingModal";
 import {
   mockHealthStats,
-  mockAppointments,
-  mockPrescriptions,
-  mockMedicalRecords,
   Doctor,
 } from "./patientDemoData";
 import patientApi from "../../services/patientApi";
@@ -29,8 +26,8 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
   // In a real app, these would come from API calls
   const [appointments, setAppointments] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [uploadedFilesCount, setUploadedFilesCount] = useState<number>(0);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(true);
-  const [medicalRecords] = useState(mockMedicalRecords);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [dialog, setDialog] = useState<{
     isOpen: boolean;
@@ -64,7 +61,17 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
     fetchDoctors();
     fetchAppointments();
     fetchPrescriptions();
+    fetchUploadedFilesCount();
   }, []);
+
+  const fetchUploadedFilesCount = async () => {
+    try {
+      const files = await patientApi.getUploadedFiles();
+      setUploadedFilesCount(files.length);
+    } catch (error) {
+      console.error('Error fetching uploaded files count:', error);
+    }
+  };
   
   //to fetch appointments
   const fetchAppointments = async () => {
@@ -153,6 +160,9 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
         scheduledAt: `${bookingData.date}T${time24}`,
         duration: 30,
         timingId: bookingData.timingId,
+        patientName: bookingData.patientName,
+       patientAge: bookingData.patientAge,
+       patientGender: bookingData.patientGender,
       });
 
       setDialog({
@@ -194,7 +204,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
       id: "records",
       label: "Medical Records",
       icon: FolderOpen,
-      count: medicalRecords.length,
+      count: uploadedFilesCount,
     },
   ];
 
@@ -279,7 +289,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
               <PatientPrescriptions prescriptions={prescriptions || []} />
             )}
 
-            {activeTab === "records" && <PatientMedicalRecords records={medicalRecords} />}
+            {activeTab === "records" && <PatientMedicalRecords records={[]} />}
           </div>
         </div>
 
@@ -300,7 +310,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
               <FileText className="h-5 w-5 text-green-600" />
             </div>
             <p className="text-xl md:text-2xl font-bold text-gray-900">
-              {prescriptions.filter((p) => p.status === "dispensed").length}
+              {prescriptions.filter((p) => p.status === "READY_FOR_PICKUP").length}
             </p>
             <p className="text-xs md:text-sm text-gray-600">Active Rx</p>
           </div>
@@ -309,7 +319,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <FolderOpen className="h-5 w-5 text-purple-600" />
             </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{medicalRecords.length}</p>
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{uploadedFilesCount}</p>
             <p className="text-xs md:text-sm text-gray-600">Records</p>
           </div>
 

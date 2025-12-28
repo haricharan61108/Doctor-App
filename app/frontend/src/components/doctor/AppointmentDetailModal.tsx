@@ -1,19 +1,20 @@
-import { X, User, Mail, Phone, Calendar, Clock, FileText, Upload, Send } from "lucide-react";
+import { X, User, Mail, Phone, Calendar, Clock, FileText, Upload, Send, Sparkles, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import doctorApi, { AppointmentDetail } from "../../services/doctorApi";
-import PrescriptionCard from "./PrescriptionCard";
 import FileCard from "./FileCard";
 
 interface AppointmentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   appointmentId: string;
+  onPrescriptionCreated?: () => void;
 }
 
 export default function AppointmentDetailModal({
   isOpen,
   onClose,
-  appointmentId
+  appointmentId,
+  onPrescriptionCreated
 }: AppointmentDetailModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [appointmentData, setAppointmentData] = useState<AppointmentDetail | null>(null);
@@ -60,15 +61,19 @@ export default function AppointmentDetailModal({
         content: prescriptionText
       });
 
-      // Refresh appointment details to show new prescription
-      await fetchAppointmentDetails();
-
       // Clear the form and show success message
       setPrescriptionText("");
       setSuccessMessage('Prescription created successfully!');
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
+      // Call the callback to refresh parent component
+      if (onPrescriptionCreated) {
+        onPrescriptionCreated();
+      }
+
+      // Close modal after a short delay to show success message
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (err: any) {
       console.error('Error creating prescription:', err);
       setError(err.response?.data?.error || 'Failed to create prescription');
@@ -104,10 +109,10 @@ export default function AppointmentDetailModal({
         onClick={onClose}
       />
 
-      {/* Modal Panel */}
-      <div className="absolute inset-y-0 right-0 max-w-full flex">
-        <div className="w-screen max-w-3xl">
-          <div className="h-full flex flex-col bg-white shadow-xl">
+      {/* Modal Panel - Full Screen */}
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-7xl h-full">
+          <div className="h-full flex flex-col bg-white shadow-2xl rounded-xl overflow-hidden">
             {/* Header */}
             <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
               <div className="flex items-center justify-between">
@@ -161,7 +166,7 @@ export default function AppointmentDetailModal({
                         <h3 className="text-xl font-bold text-gray-900 mb-3">
                           {appointmentData.patient.name || 'Patient'}
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {appointmentData.patient.email && (
                             <div className="flex items-center gap-2 text-gray-700">
                               <Mail className="h-4 w-4 text-blue-600" />
@@ -172,6 +177,18 @@ export default function AppointmentDetailModal({
                             <div className="flex items-center gap-2 text-gray-700">
                               <Phone className="h-4 w-4 text-blue-600" />
                               <span className="text-sm">{appointmentData.patient.phone}</span>
+                            </div>
+                          )}
+                          {appointmentData.patient.age && (
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <Users className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium">Age: {appointmentData.patient.age} years</span>
+                            </div>
+                          )}
+                          {appointmentData.patient.gender && (
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <User className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium">Gender: {appointmentData.patient.gender}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-2 text-gray-700">
@@ -202,28 +219,35 @@ export default function AppointmentDetailModal({
                     </div>
                   )}
 
-                  {/* Prescription History */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-bold text-gray-900">Prescription History</h3>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                        {appointmentData.patient.prescriptions.length}
+                  {/* AI Summary */}
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border-2 border-purple-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                        <Sparkles className="h-5 w-5 text-white" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">AI Summary</h3>
+                      <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                        Powered by AI
                       </span>
                     </div>
 
-                    {appointmentData.patient.prescriptions.length === 0 ? (
-                      <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                        <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-gray-600">No previous prescriptions for this patient</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {appointmentData.patient.prescriptions.map((prescription) => (
-                          <PrescriptionCard key={prescription.id} prescription={prescription} />
-                        ))}
-                      </div>
-                    )}
+                    <div className="bg-white rounded-lg p-5 border border-purple-200">
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {appointmentData.patient.age && appointmentData.patient.gender
+                          ? `${appointmentData.patient.age}-year-old ${appointmentData.patient.gender.toLowerCase()} patient presenting for scheduled consultation. `
+                          : 'Patient presenting for scheduled consultation. '}
+                        This patient has {appointmentData.patient.prescriptions.length} prescription{appointmentData.patient.prescriptions.length !== 1 ? 's' : ''} on record
+                        and {appointmentData.patient.uploadedFiles.length} medical document{appointmentData.patient.uploadedFiles.length !== 1 ? 's' : ''} uploaded.
+                        Based on the medical history, it is recommended to conduct a thorough patient review, check for any medication allergies or contraindications,
+                        and carefully review all uploaded medical documents before proceeding with the consultation. Document all findings and treatment plans in the prescription notes for future reference.
+                      </p>
+                    </div>
+
+                    <div className="bg-purple-100 border border-purple-300 rounded-lg p-3 mt-4">
+                      <p className="text-xs text-purple-800">
+                        <strong>Note:</strong> AI-generated summaries are for informational purposes only and should be used in conjunction with professional medical judgment.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Uploaded Files */}

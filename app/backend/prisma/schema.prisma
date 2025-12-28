@@ -20,6 +20,8 @@ model Patient {
   name      String?
   avatarUrl String?
   phone     String?
+  age       Int?
+  gender    String?
 
   appointments  Appointment[]
   prescriptions Prescription[]

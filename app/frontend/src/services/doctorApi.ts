@@ -35,6 +35,8 @@ export interface Doctor {
     email: string;
     phone: string | null;
     avatarUrl: string | null;
+    age: number | null;
+    gender: string | null;
   }
 
   export interface Appointment {

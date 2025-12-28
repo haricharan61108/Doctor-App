@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { GoogleLogin } from '@react-oauth/google'
+import { Heart } from 'lucide-react'
 
 /**
  * LoginPage Component - Production-ready Healthcare Login
@@ -259,19 +260,7 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
         >
           <div className="max-w-md text-center">
             <div className="mb-8">
-              <svg width="120" height="120" viewBox="0 0 120 120" className="mx-auto" fill="none">
-                <rect width="120" height="120" rx="24" fill="currentColor" opacity="0.1" />
-                <path
-                  d="M60 40C48.95 40 40 48.95 40 60c0 11.05 8.95 20 20 20s20-8.95 20-20c0-11.05-8.95-20-20-20z"
-                  fill="white"
-                  opacity="0.8"
-                />
-                <path
-                  d="M80 75c0-3.31 1.79-6.2 4.46-7.76-3.16-1.4-6.7-2.24-10.46-2.24-13.25 0-24 10.75-24 24v4h30v-18z"
-                  fill="white"
-                  opacity="0.6"
-                />
-              </svg>
+              <Heart className="mx-auto text-white" size={120} strokeWidth={1.5} />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">UHealth</h1>
             <p className={`text-base sm:text-lg ${isDarkMode ? "text-indigo-200" : "text-indigo-50"}`}>
@@ -290,12 +279,10 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
             {/* Mobile Logo - Only visible on mobile */}
             <div className="lg:hidden mb-6 text-center">
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${isDarkMode ? "bg-slate-800" : "bg-white"}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-indigo-600" : "bg-indigo-500"}`}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                  </svg>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDarkMode ? "bg-red-600" : "bg-red-500"}`}>
+                  <Heart className="h-5 w-5 text-white" fill="white" />
                 </div>
-                <span className="text-lg font-bold">HealthHub</span>
+                <span className="text-lg font-bold">UHealth</span>
               </div>
             </div>
 
@@ -471,31 +458,6 @@ export default function LoginPage({ onLogin, onGoogleLogin, initialRole = "patie
                         {form.errors.password}
                       </p>
                     )}
-                  </div>
-
-                  {/* Remember me & Forgot password */}
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        disabled={isLoading}
-                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                        aria-label="Remember me on this device"
-                      />
-                      <span className="text-xs sm:text-sm">Remember me</span>
-                    </label>
-                    <a
-                      href="#forgot-password"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        // TODO: Implement forgot password flow
-                      }}
-                      className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-                    >
-                      Forgot password?
-                    </a>
                   </div>
 
                   {/* Submit button */}

@@ -27,26 +27,27 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
     type: 'info'
   });
 
-  useEffect(()=> {
-    const fetchAppointments = async()=> {
-      try {
-        setLoading(true);
-        const data = await doctorApi.getAllAppointments();
-        setAppointments(data);
-      } catch (error) {
-        console.error('Error fetching appointments:', error);
-        setDialog({
-          isOpen: true,
-          title: 'Error Loading Appointments',
-          message: 'Failed to load appointments. Please try again.',
-          type: 'error'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const data = await doctorApi.getAllAppointments();
+      setAppointments(data);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      setDialog({
+        isOpen: true,
+        title: 'Error Loading Appointments',
+        message: 'Failed to load appointments. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAppointments();
-  },[]);
+  }, []);
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
@@ -252,6 +253,11 @@ export default function DoctorDashboard({ userName }: DoctorDashboardProps) {
             setSelectedAppointmentId(null);
           }}
           appointmentId={selectedAppointmentId}
+          onPrescriptionCreated={() => {
+            fetchAppointments();
+            setIsModalOpen(false);
+            setSelectedAppointmentId(null);
+          }}
         />
       )}
     </div>

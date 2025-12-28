@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Calendar, Clock, Stethoscope, Star } from "lucide-react";
+import { X, Calendar, Clock, Stethoscope, Star, User } from "lucide-react";
 import { Doctor } from "./patientDemoData";
 import patientApi, { DoctorTiming } from "../../services/patientApi";
 
@@ -15,8 +15,10 @@ export interface BookingData {
   date: string;
   time: string;
   reason: string;
-  type: "in-person" | "video" | "phone";
   timingId?: string;
+  patientName: string;
+  patientAge: string;
+  patientGender: string;
 }
 
 export default function PatientBookingModal({
@@ -30,7 +32,9 @@ export default function PatientBookingModal({
     date: "",
     time: "",
     reason: "",
-    type: "in-person",
+    patientName: "",
+    patientAge: "",
+    patientGender: "",
   });
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -82,6 +86,19 @@ export default function PatientBookingModal({
     if (!bookingData.time) newErrors.time = "Please select a time";
     if (!bookingData.reason.trim()) newErrors.reason = "Please provide a reason for visit";
 
+    if (!bookingData.patientName.trim()) {
+      newErrors.patientName = "Please enter your name";
+    }
+    if (!bookingData.patientAge) {
+      newErrors.patientAge = "Please enter your age";
+    } else if (parseInt(bookingData.patientAge) < 1 ||
+  parseInt(bookingData.patientAge) > 120) {
+      newErrors.patientAge = "Please enter a valid age (1-120)";
+    }
+    if (!bookingData.patientGender) {
+      newErrors.patientGender = "Please select your gender";
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -97,7 +114,9 @@ export default function PatientBookingModal({
       date: "",
       time: "",
       reason: "",
-      type: "in-person",
+      patientName: "",
+      patientAge: "",
+      patientGender: "",
     });
     setErrors({});
     setAvailableTimings([]);
@@ -179,35 +198,105 @@ export default function PatientBookingModal({
               </div>
             )}
           </div>
+          
+          {/* Patient Information Section */}
+  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 
+  space-y-4">
+    <h3 className="font-semibold text-gray-900 text-sm flex 
+  items-center gap-2">
+      <User className="h-4 w-4 text-blue-600" />
+      Patient Information
+    </h3>
 
-          {/* Appointment Type */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Appointment Type
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: "in-person", label: "In-Person", icon: "🏥" },
-                { value: "video", label: "Video Call", icon: "📹" },
-                { value: "phone", label: "Phone Call", icon: "📞" },
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setBookingData({ ...bookingData, type: type.value as BookingData["type"] })}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    bookingData.type === type.value
-                      ? "border-blue-600 bg-blue-50 text-blue-900"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <div className="text-2xl mb-1">{type.icon}</div>
-                  <div className="text-xs font-medium">{type.label}</div>
-                </button>
-              ))}
-            </div>
-          </div>
+    {/* Name Field */}
+    <div>
+      <label className="block text-sm font-semibold text-gray-900 
+  mb-2">
+        Full Name <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        value={bookingData.patientName}
+        onChange={(e) => {
+          setBookingData({ ...bookingData, patientName: e.target.value
+   });
+          setErrors({ ...errors, patientName: "" });
+        }}
+        placeholder="Enter your full name"
+        className={`w-full px-4 py-3 border ${
+          errors.patientName ? "border-red-300 bg-red-50" :
+  "border-gray-300"
+        } rounded-lg focus:ring-2 focus:ring-blue-500
+  focus:border-transparent outline-none transition`}
+      />
+      {errors.patientName && (
+        <p className="mt-1 text-sm 
+  text-red-600">{errors.patientName}</p>
+      )}
+    </div>
 
+    {/* Age and Gender in Grid */}
+    <div className="grid grid-cols-2 gap-4">
+      {/* Age Field */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 
+  mb-2">
+          Age <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="number"
+          min="1"
+          max="120"
+          value={bookingData.patientAge}
+          onChange={(e) => {
+            setBookingData({ ...bookingData, patientAge:
+  e.target.value });
+            setErrors({ ...errors, patientAge: "" });
+          }}
+          placeholder="Age"
+          className={`w-full px-4 py-3 border ${
+            errors.patientAge ? "border-red-300 bg-red-50" :
+  "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500
+  focus:border-transparent outline-none transition`}
+        />
+        {errors.patientAge && (
+          <p className="mt-1 text-sm 
+  text-red-600">{errors.patientAge}</p>
+        )}
+      </div>
+
+      {/* Gender Field */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-900 
+  mb-2">
+          Gender <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={bookingData.patientGender}
+          onChange={(e) => {
+            setBookingData({ ...bookingData, patientGender:
+  e.target.value });
+            setErrors({ ...errors, patientGender: "" });
+          }}
+          className={`w-full px-4 py-3 border ${
+            errors.patientGender ? "border-red-300 bg-red-50" :
+  "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500
+  focus:border-transparent outline-none transition`}
+        >
+          <option value="">Select...</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+        {errors.patientGender && (
+          <p className="mt-1 text-sm 
+  text-red-600">{errors.patientGender}</p>
+        )}
+      </div>
+    </div>
+  </div>
           {/* Date and Time */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -284,7 +373,7 @@ export default function PatientBookingModal({
           {/* Reason for Visit */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
-              Reason for Visit
+              Reason for Visit <span className="text-red-500">*</span>
             </label>
             <textarea
               placeholder="Describe your symptoms or reason for consultation..."

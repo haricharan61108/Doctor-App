@@ -389,6 +389,8 @@ export const deletePrescription = async (req: Request, res: Response): Promise<v
                             name: true,
                             avatarUrl: true,
                             phone: true,
+                            age: true,
+                            gender: true,
                             prescriptions: {
                                 where: {
                                     doctorId

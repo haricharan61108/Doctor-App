@@ -52,6 +52,9 @@ export interface BookingPayload {
   scheduledAt: string;
   duration?: number;
   timingId?: string;
+  patientName: string;
+  patientAge: string;
+  patientGender: string;
 }
 
 export interface PatientFile {
