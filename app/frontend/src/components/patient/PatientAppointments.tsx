@@ -130,14 +130,6 @@ export default function PatientAppointments({ appointments, onBookAppointment }:
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 lg:flex-col lg:w-24">
-                    <button className="flex-1 lg:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-                      Join
-                    </button>
-                    <button className="flex-1 lg:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
-                      Cancel
-                    </button>
-                  </div>
                 </div>
               </div>
             ))}

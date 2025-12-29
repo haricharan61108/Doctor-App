@@ -1,4 +1,4 @@
-import { X, User, Mail, Phone, Calendar, Clock, FileText, Upload, Send, Sparkles, Users } from "lucide-react";
+import { X, User, Mail, Phone, Calendar, Clock, FileText, Upload, Send, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import doctorApi, { AppointmentDetail } from "../../services/doctorApi";
 import FileCard from "./FileCard";
@@ -179,18 +179,6 @@ export default function AppointmentDetailModal({
                               <span className="text-sm">{appointmentData.patient.phone}</span>
                             </div>
                           )}
-                          {appointmentData.patient.age && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Users className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium">Age: {appointmentData.patient.age} years</span>
-                            </div>
-                          )}
-                          {appointmentData.patient.gender && (
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <User className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium">Gender: {appointmentData.patient.gender}</span>
-                            </div>
-                          )}
                           <div className="flex items-center gap-2 text-gray-700">
                             <Clock className="h-4 w-4 text-blue-600" />
                             <span className="text-sm">{appointmentData.duration} minutes</span>
@@ -233,9 +221,7 @@ export default function AppointmentDetailModal({
 
                     <div className="bg-white rounded-lg p-5 border border-purple-200">
                       <p className="text-sm text-gray-700 leading-relaxed">
-                        {appointmentData.patient.age && appointmentData.patient.gender
-                          ? `${appointmentData.patient.age}-year-old ${appointmentData.patient.gender.toLowerCase()} patient presenting for scheduled consultation. `
-                          : 'Patient presenting for scheduled consultation. '}
+                        Patient presenting for scheduled consultation.
                         This patient has {appointmentData.patient.prescriptions.length} prescription{appointmentData.patient.prescriptions.length !== 1 ? 's' : ''} on record
                         and {appointmentData.patient.uploadedFiles.length} medical document{appointmentData.patient.uploadedFiles.length !== 1 ? 's' : ''} uploaded.
                         Based on the medical history, it is recommended to conduct a thorough patient review, check for any medication allergies or contraindications,

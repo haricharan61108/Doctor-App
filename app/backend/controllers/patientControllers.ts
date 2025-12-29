@@ -334,30 +334,13 @@ export const bookAppointment = async(req: Request, res: Response): Promise<void>
     try {
         const patientId = (req as any).patient.id;
 
-        const {doctorId, scheduledAt, duration=30, timingId, patientName, patientAge, patientGender} = req.body;
+        const {doctorId, scheduledAt, duration=30, timingId} = req.body;
 
         if(!doctorId || !scheduledAt) {
             res.status(400).json({ error: "Doctor ID and scheduledAt required" });
             return;
         }
 
-        if (!patientName || !patientAge || !patientGender) {
-             res.status(400).json({
-              error: "Patient name, age, and gender are required"
-            });
-            return ;
-          }
-
-          await prisma.patient.update({
-            where: {
-                id: patientId,
-            },
-            data: {
-                name: patientName,
-                age: parseInt(patientAge),
-                gender: patientGender,
-            }
-          })
         const doctor = await prisma.doctor.findUnique({
             where: {
                 id: doctorId

@@ -137,32 +137,38 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
     console.log("Booking appointment:", bookingData);
 
     try {
-      // Convert 12-hour time format to 24-hour format for ISO string
-      const convertTo24Hour = (time12h: string): string => {
-        const [time, modifier] = time12h.split(' ');
-        let [hours, minutes] = time.split(':');
+      // Use the ISO timestamp directly if available, otherwise convert the time
+      let scheduledAt: string;
 
-        if (hours === '12') {
-          hours = '00';
-        }
+      if (bookingData.startTimeISO) {
+        // Use the original ISO timestamp from the backend
+        scheduledAt = bookingData.startTimeISO;
+      } else {
+        // Fallback: Convert 12-hour time format to 24-hour format for ISO string
+        const convertTo24Hour = (time12h: string): string => {
+          const [time, modifier] = time12h.split(' ');
+          let [hours, minutes] = time.split(':');
 
-        if (modifier === 'PM') {
-          hours = String(parseInt(hours, 10) + 12);
-        }
+          if (hours === '12') {
+            hours = '00';
+          }
 
-        return `${hours.padStart(2, '0')}:${minutes}:00`;
-      };
+          if (modifier === 'PM') {
+            hours = String(parseInt(hours, 10) + 12);
+          }
 
-      const time24 = convertTo24Hour(bookingData.time);
+          return `${hours.padStart(2, '0')}:${minutes}:00`;
+        };
+
+        const time24 = convertTo24Hour(bookingData.time);
+        scheduledAt = `${bookingData.date}T${time24}`;
+      }
 
       const result = await patientApi.bookAppointment({
         doctorId: bookingData.doctor_id,
-        scheduledAt: `${bookingData.date}T${time24}`,
+        scheduledAt: scheduledAt,
         duration: 30,
         timingId: bookingData.timingId,
-        patientName: bookingData.patientName,
-       patientAge: bookingData.patientAge,
-       patientGender: bookingData.patientGender,
       });
 
       setDialog({
@@ -294,7 +300,7 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
         </div>
 
         {/* Quick Stats Footer */}
-        <div className="mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
+        <div className="mt-6 md:mt-8 grid grid-cols-2 gap-3 md:gap-4">
           <div className="bg-white rounded-lg p-4 border border-gray-200 text-center">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <Calendar className="h-5 w-5 text-blue-600" />
@@ -306,29 +312,11 @@ export default function PatientDashboard({ userName }: PatientDashboardProps) {
           </div>
 
           <div className="bg-white rounded-lg p-4 border border-gray-200 text-center">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <FileText className="h-5 w-5 text-green-600" />
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">
-              {prescriptions.filter((p) => p.status === "READY_FOR_PICKUP").length}
-            </p>
-            <p className="text-xs md:text-sm text-gray-600">Active Rx</p>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 border border-gray-200 text-center">
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <FolderOpen className="h-5 w-5 text-purple-600" />
             </div>
             <p className="text-xl md:text-2xl font-bold text-gray-900">{uploadedFilesCount}</p>
             <p className="text-xs md:text-sm text-gray-600">Records</p>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 border border-gray-200 text-center">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-              <User className="h-5 w-5 text-red-600" />
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-gray-900">{doctors.length}</p>
-            <p className="text-xs md:text-sm text-gray-600">Doctors</p>
           </div>
         </div>
       </div>

@@ -172,22 +172,6 @@ export default function PrescriptionModal({ isOpen, onClose, appointmentId }: Pr
                     </p>
                   </div>
                 )}
-
-                {prescription.expiresAt && (
-                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                    <div className="flex items-center gap-2 text-yellow-700 mb-1">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Expires On</span>
-                    </div>
-                    <p className="text-yellow-900 font-semibold">
-                      {new Date(prescription.expiresAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}

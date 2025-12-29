@@ -136,7 +136,7 @@ export default function PatientPrescriptions({ prescriptions }: PatientPrescript
               </div>
 
               {/* Timeline Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Created Date */}
                 <div className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
                   <div className="flex items-center gap-2 text-blue-600 mb-1.5">
@@ -157,19 +157,6 @@ export default function PatientPrescriptions({ prescriptions }: PatientPrescript
                     </div>
                     <p className="text-gray-900 font-semibold text-sm">
                       {formatDate(presc.issuedAt)}
-                    </p>
-                  </div>
-                )}
-
-                {/* Expiry Date */}
-                {presc.expiresAt && (
-                  <div className="bg-amber-50 rounded-xl p-4 shadow-sm border-l-4 border-amber-500">
-                    <div className="flex items-center gap-2 text-amber-700 mb-1.5">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-xs font-bold uppercase tracking-wide">Expires</span>
-                    </div>
-                    <p className="text-amber-900 font-semibold text-sm">
-                      {formatDate(presc.expiresAt)}
                     </p>
                   </div>
                 )}
