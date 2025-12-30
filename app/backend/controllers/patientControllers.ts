@@ -242,7 +242,16 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
         }
 
         // Parse the date (default to today if not provided)
-        const targetDate = date && typeof date === 'string' ? new Date(date) : new Date();
+        let targetDate: Date;
+        if (date && typeof date === 'string') {
+            const parts = date.split('-');
+            const year = parseInt(parts[0] || '0', 10);
+            const month = parseInt(parts[1] || '0', 10);
+            const day = parseInt(parts[2] || '0', 10);
+            targetDate = new Date(year, month - 1, day);
+        } else {
+            targetDate = new Date();
+        }
         const startOfDay = new Date(targetDate);
         startOfDay.setHours(0, 0, 0, 0);
 
