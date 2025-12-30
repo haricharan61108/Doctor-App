@@ -248,7 +248,8 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
             const year = parseInt(parts[0] || '0', 10);
             const month = parseInt(parts[1] || '0', 10);
             const day = parseInt(parts[2] || '0', 10);
-            targetDate = new Date(year, month - 1, day);
+            const utcDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+            targetDate = new Date(utcDate.getTime() - (330*60*1000));
         } else {
             targetDate = new Date();
         }
