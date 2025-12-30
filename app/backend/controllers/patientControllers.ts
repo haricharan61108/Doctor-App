@@ -241,23 +241,28 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
             return;
         }
 
-        // Parse the date (default to today if not provided)
+        // Parse the date string as UTC date
         let targetDate: Date;
         if (date && typeof date === 'string') {
             const parts = date.split('-');
             const year = parseInt(parts[0] || '0', 10);
             const month = parseInt(parts[1] || '0', 10);
             const day = parseInt(parts[2] || '0', 10);
-            const utcDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-            targetDate = new Date(utcDate.getTime() - (330*60*1000));
+
+            // Create date in UTC - will be used by slot generator to create IST times
+            targetDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
         } else {
             targetDate = new Date();
         }
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
 
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        // IST offset for boundary calculations
+        const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+        // Start of day in IST = 00:00 IST = previous day 18:30 UTC
+        const startOfDay = new Date(targetDate.getTime() - IST_OFFSET_MS);
+
+        // End of day in IST = 23:59:59 IST
+        const endOfDay = new Date(targetDate.getTime() + (24 * 60 * 60 * 1000) - IST_OFFSET_MS - 1);
 
         // Check if doctor has custom timings for this date
         const customTimings = await prisma.doctorTiming.findMany({
@@ -322,11 +327,21 @@ export const getDoctorTimings = async(req: Request, res: Response): Promise<void
         });
 
         const now = new Date();
+
+        // Get current date in IST
+        const nowIST = new Date(now.getTime() + IST_OFFSET_MS);
+        const todayISTDate = new Date(Date.UTC(
+            nowIST.getUTCFullYear(),
+            nowIST.getUTCMonth(),
+            nowIST.getUTCDate(),
+            0, 0, 0, 0
+        ));
+
         const availableTimings = timingsWithBookingStatus.filter(timing => {
             if (timing.isBooked) return false;
 
-            // If the date is today, filter out past slots
-            if (targetDate.toDateString() === now.toDateString()) {
+            // If the requested date is today in IST, filter out past slots
+            if (targetDate.getTime() === todayISTDate.getTime()) {
                 return timing.startTime > now;
             }
 

@@ -16,13 +16,17 @@ export interface TimeSlot {
 export function generateDefaultTimeSlots(date: Date): TimeSlot[] {
   const slots: TimeSlot[] = [];
 
-  // Set to the beginning of the day
-  const currentDate = new Date(date);
-  currentDate.setHours(0, 0, 0, 0);
+  // IST offset: UTC + 5:30
+  const IST_OFFSET_HOURS = 5.5;
 
-  // Start time: 9:00 AM
+  // Get the date components
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+
+  // Start time: 9:00 AM IST
   const startHour = 9;
-  // End time: 11:00 PM (23:00) - EXTENDED FOR TESTING
+  // End time: 11:00 PM IST (23:00) - EXTENDED FOR TESTING
   const endHour = 23;
   // Slot duration in minutes
   const slotDuration = 30;
@@ -50,16 +54,23 @@ export function generateDefaultTimeSlots(date: Date): TimeSlot[] {
         continue;
       }
 
-      // Create start time
-      const startTime = new Date(currentDate);
-      startTime.setHours(hour, minute, 0, 0);
+      // Create start time in IST (represented as UTC)
+      // E.g., 9:00 AM IST = 3:30 AM UTC same day
+      const utcHour = hour - IST_OFFSET_HOURS;
+      const startTime = new Date(Date.UTC(year, month, day, Math.floor(utcHour), minute, 0, 0));
+
+      // Adjust for fractional hours (30 minutes from IST offset)
+      if (IST_OFFSET_HOURS % 1 !== 0) {
+        startTime.setUTCMinutes(startTime.getUTCMinutes() + ((IST_OFFSET_HOURS % 1) * 60));
+      }
 
       // Create end time (30 minutes later)
       const endTime = new Date(startTime);
-      endTime.setMinutes(endTime.getMinutes() + slotDuration);
+      endTime.setUTCMinutes(endTime.getUTCMinutes() + slotDuration);
 
-      // Don't add slots that go beyond 11 PM
-      if (endTime.getHours() > endHour) {
+      // Don't add slots that go beyond 11 PM IST
+      const endHourIST = (endTime.getUTCHours() + IST_OFFSET_HOURS) % 24;
+      if (endHourIST > endHour) {
         break;
       }
 
