@@ -19,10 +19,10 @@ export const patientRouter = express.Router();
 // Protected routes (authentication required)
 patientRouter.use(patientMiddleware);
 
-// Get all available doctors - public so patients can see doctors before booking
+// Get all available doctors 
 patientRouter.get("/doctors", getAllDoctors);
 
-// Get available time slots for a specific doctor - public for booking flow
+// Get available time slots for a specific doctor 
 patientRouter.get("/doctors/:doctorId/timings", getDoctorTimings);
 
 // Book an appointment
